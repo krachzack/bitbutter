@@ -1,6 +1,7 @@
 import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.geom.AffineTransform;
+import java.util.Arrays;
 
 public class World {
 	public static final int POSITION_X = 0;
@@ -16,17 +17,32 @@ public class World {
 	public static final int DIMENSION_X = 7;
 	public static final int DIMENSION_Y = 8;
 	
+	public static final int IN_USE = 9;
+	
 	private static final int POSITION_SIZE = 2;
 	private static final int VELOCITY_SIZE = 2;
 	private static final int COLOR_SIZE = 3;
 	private static final int DIMENSION_SIZE = 2;
-	private static final int ENTITY_SIZE = POSITION_SIZE + VELOCITY_SIZE + COLOR_SIZE + DIMENSION_SIZE;
+	private static final int IN_USE_SIZE = 1;
+	private static final int ENTITY_SIZE = POSITION_SIZE + VELOCITY_SIZE + COLOR_SIZE + DIMENSION_SIZE + IN_USE_SIZE;
 	
 	private float[] entities = new float[0];
 	private int entityCount = 0;
 	
 	public int addEntity() {
-		int id = entityCount++;
+		int id = -1;
+		
+		for(int i = IN_USE; i < entities.length; i += ENTITY_SIZE) {
+			if(entities[i] == 0.0f) {
+				// Is not in use, use or re-use the ID
+				id = i / ENTITY_SIZE;
+				Arrays.fill(entities, id*ENTITY_SIZE, (id+1)*ENTITY_SIZE, 0.0f);
+			}
+		}
+		
+		if(id == -1) {
+			id = entityCount++;
+		}
 		
 		if((id*ENTITY_SIZE) >= entities.length) {
 			float[] oldEntities = entities;
@@ -34,7 +50,14 @@ public class World {
 			System.arraycopy(oldEntities, 0, entities, 0, oldEntities.length);
 		}
 		
+		// Mark as in use
+		entities[id*ENTITY_SIZE + IN_USE] = 1.0f;
+		
 		return id;
+	}
+	
+	public void removeEntity(int id) {
+		entities[id * ENTITY_SIZE + IN_USE] = 0.0f; 
 	}
 	
 	public void set(int entityID, int component, float val) {
@@ -50,9 +73,11 @@ public class World {
 	}
 
 	private void move(float dt) {
-		for(int offset = 0; offset < (entityCount*ENTITY_SIZE); offset += ENTITY_SIZE) {
-			entities[offset + POSITION_X] += dt * entities[offset + VELOCITY_X];
-			entities[offset + POSITION_Y] += dt * entities[offset + VELOCITY_Y];
+		for(int offset = 0; offset < entities.length; offset += ENTITY_SIZE) {
+			if(entities[offset + IN_USE] == 1.0f) {
+				entities[offset + POSITION_X] += dt * entities[offset + VELOCITY_X];
+				entities[offset + POSITION_Y] += dt * entities[offset + VELOCITY_Y];
+			}
 		}
 	}
 	
@@ -64,17 +89,19 @@ public class World {
 		g.scale(1, -1);
 		AffineTransform baseTrans = g.getTransform();
 		
-		for(int offset = 0; offset < (entityCount*ENTITY_SIZE); offset += ENTITY_SIZE) {
-			float posX = entities[offset + POSITION_X];
-			float posY = entities[offset + POSITION_Y];
-			
-			g.translate(entities[offset + POSITION_X], entities[offset + POSITION_Y]);
-			g.scale(entities[offset + DIMENSION_X] / 2, entities[offset + DIMENSION_Y] / 2);
-			
-			g.setColor(new Color(entities[offset + COLOR_R], entities[offset + COLOR_G], entities[offset + COLOR_B]));
-			g.fillOval(-1, -1, 2, 2);
-			
-			g.setTransform(baseTrans);
+		for(int offset = 0; offset < entities.length; offset += ENTITY_SIZE) {
+			if(entities[offset + IN_USE] == 1.0) {
+				float posX = entities[offset + POSITION_X];
+				float posY = entities[offset + POSITION_Y];
+				
+				g.translate(entities[offset + POSITION_X], entities[offset + POSITION_Y]);
+				g.scale(entities[offset + DIMENSION_X] / 2, entities[offset + DIMENSION_Y] / 2);
+				
+				g.setColor(new Color(entities[offset + COLOR_R], entities[offset + COLOR_G], entities[offset + COLOR_B]));
+				g.fillOval(-1, -1, 2, 2);
+				
+				g.setTransform(baseTrans);
+			}
 		}
 		
 		g.setColor(oldColor);

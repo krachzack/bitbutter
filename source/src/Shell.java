@@ -1,9 +1,13 @@
+import java.awt.AWTEvent;
 import java.awt.Canvas;
 import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.MouseInfo;
 import java.awt.Point;
 import java.awt.RenderingHints;
+import java.awt.Toolkit;
+import java.awt.event.AWTEventListener;
+import java.awt.event.MouseEvent;
 import java.awt.image.BufferStrategy;
 
 import javax.swing.JFrame;
@@ -13,6 +17,12 @@ public class Shell {
 	
 	public static float mouseX;
 	public static float mouseY;
+	
+	public static boolean mousePressed;
+	public static boolean mouseReleased;
+	
+	private static boolean mousePressedNextFrame;
+	private static boolean mouseReleasedNextFrame;
 	
 	public static final int WIDTH = 800;
 	public static final int HEIGHT = 600;
@@ -26,6 +36,23 @@ public class Shell {
 		initWindow();
 		world = new World();
 		game = new Mechanics(world);
+		
+		Toolkit.getDefaultToolkit().addAWTEventListener(new AWTEventListener() {	
+			@Override
+			public void eventDispatched(AWTEvent event) {
+				synchronized (Shell.class) {
+					if(event.getID() == MouseEvent.MOUSE_PRESSED) {
+						mousePressedNextFrame = true;
+					} else if(event.getID() == MouseEvent.MOUSE_RELEASED) {
+						mousePressedNextFrame = false;
+						mouseReleasedNextFrame = true;
+					} else {
+						mousePressedNextFrame = false;
+						mouseReleasedNextFrame = false;
+					}
+				}
+			}
+		}, AWTEvent.MOUSE_EVENT_MASK);
 		
 		long lastFrameTime = System.nanoTime();
 		while(true) {
@@ -45,10 +72,16 @@ public class Shell {
 	}
 
 	private static void locateMouse() {
+		
 		Point mousePos = MouseInfo.getPointerInfo().getLocation();
 		SwingUtilities.convertPointFromScreen(mousePos, canvas);
 		mouseX = mousePos.x - WIDTH / 2.0f;
 		mouseY = -(mousePos.y - HEIGHT / 2.0f);
+		
+		synchronized (Shell.class) {
+			mousePressed = mousePressedNextFrame;
+			mouseReleased = mouseReleasedNextFrame;
+		}
 	}
 
 	private static void initWindow() {
@@ -73,7 +106,7 @@ public class Shell {
 		Graphics2D g = (Graphics2D) bufferStrategy.getDrawGraphics();
 		
 		// Draw the background first
-		g.setColor(Color.WHITE);
+		g.setColor(mousePressed ? Color.BLACK : Color.WHITE);
 		g.fillRect(0, 0, WIDTH, HEIGHT);
 		
 		g.setColor(Color.DARK_GRAY);
