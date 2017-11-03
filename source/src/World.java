@@ -56,7 +56,7 @@ public class World {
 		AffineTransform oldTrans = g.getTransform();
 		Color oldColor = g.getColor();
 		
-		g.translate(MiniGame.WIDTH / 2.0, MiniGame.HEIGHT / 2.0);
+		g.translate(Shell.WIDTH / 2.0, Shell.HEIGHT / 2.0);
 		g.scale(1, -1);
 		AffineTransform baseTrans = g.getTransform();
 		
@@ -64,8 +64,8 @@ public class World {
 			float posX = entities[offset + POSITION_X];
 			float posY = entities[offset + POSITION_Y];
 			
-			g.scale(entities[offset + DIMENSION_X] / 2, entities[offset + DIMENSION_Y] / 2);
 			g.translate(entities[offset + POSITION_X], entities[offset + POSITION_Y]);
+			g.scale(entities[offset + DIMENSION_X] / 2, entities[offset + DIMENSION_Y] / 2);
 			
 			g.setColor(new Color(entities[offset + COLOR_R], entities[offset + COLOR_G], entities[offset + COLOR_B]));
 			g.fillOval(-1, -1, 2, 2);

@@ -1,18 +1,27 @@
 import java.awt.Canvas;
 import java.awt.Color;
 import java.awt.Graphics2D;
+import java.awt.MouseInfo;
+import java.awt.Point;
+import java.awt.RenderingHints;
 import java.awt.image.BufferStrategy;
 
 import javax.imageio.ImageIO;
 import javax.swing.JFrame;
+import javax.swing.SwingUtilities;
 
-public class MiniGame {
+public class Shell {
+	
+	public static float mouseX;
+	public static float mouseY;
 	
 	public static final int WIDTH = 800;
 	public static final int HEIGHT = 600;
+	
 	private static BufferStrategy bufferStrategy;
 	private static World world = new World();
-	
+	private static Canvas canvas;
+	private static int crosshairID;
 	
 	public static void main(String[] args) {
 		initWindow();
@@ -23,14 +32,27 @@ public class MiniGame {
 			long thisFrameTime = System.nanoTime();
 			float dt = (thisFrameTime - lastFrameTime) / 1_000_000_000.0f;
 			
+			if(dt > 0.166666f) {
+				System.err.println("Delta time was long: " + dt + "s");
+			}
+			
+			locateMouse();
+			
 			run(dt);
 			
 			lastFrameTime = thisFrameTime;
 		}
 	}
 
+	private static void locateMouse() {
+		Point mousePos = MouseInfo.getPointerInfo().getLocation();
+		SwingUtilities.convertPointFromScreen(mousePos, canvas);
+		mouseX = mousePos.x - WIDTH / 2.0f;
+		mouseY = -(mousePos.y - HEIGHT / 2.0f);
+	}
+
 	private static void initWindow() {
-		Canvas canvas = new Canvas();
+		canvas = new Canvas();
 		canvas.setSize(WIDTH, HEIGHT);
 		
 		JFrame frame = new JFrame();
@@ -69,9 +91,17 @@ public class MiniGame {
 		
 		world.set(ent, World.DIMENSION_X, 10.0f);
 		world.set(ent, World.DIMENSION_Y, 10.0f);
+		
+		crosshairID = world.addEntity();
+		world.set(crosshairID, World.COLOR_G, 1.0f);
+		world.set(crosshairID, World.DIMENSION_X, 20.0f);
+		world.set(crosshairID, World.DIMENSION_Y, 20.0f);
 	}
 
 	private static void run(float dt) {
+		world.set(crosshairID, World.POSITION_X, mouseX);
+		world.set(crosshairID, World.POSITION_Y, mouseY);
+		
 		world.update(dt);
 		
 		Graphics2D g = (Graphics2D) bufferStrategy.getDrawGraphics();
@@ -85,6 +115,7 @@ public class MiniGame {
 		g.drawLine(0, HEIGHT/2, WIDTH, HEIGHT/2);
 		
 		// Then let world render itself
+		g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 		world.draw(dt, g);
 
 		g.dispose();
