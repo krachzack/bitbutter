@@ -41,6 +41,10 @@ public class World {
 		entities[entityID * ENTITY_SIZE + component] = val; 
 	}
 	
+	public float get(int entityID, int component) {
+		return entities[entityID * ENTITY_SIZE + component]; 
+	}
+	
 	public void update(float dt) {
 		move(dt);
 	}

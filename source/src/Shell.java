@@ -6,7 +6,6 @@ import java.awt.Point;
 import java.awt.RenderingHints;
 import java.awt.image.BufferStrategy;
 
-import javax.imageio.ImageIO;
 import javax.swing.JFrame;
 import javax.swing.SwingUtilities;
 
@@ -19,13 +18,12 @@ public class Shell {
 	public static final int HEIGHT = 600;
 	
 	private static BufferStrategy bufferStrategy;
-	private static World world = new World();
 	private static Canvas canvas;
-	private static int crosshairID;
+	private static Game game;
 	
 	public static void main(String[] args) {
 		initWindow();
-		initWorld();
+		game = new Game();
 		
 		long lastFrameTime = System.nanoTime();
 		while(true) {
@@ -66,43 +64,9 @@ public class Shell {
 		canvas.createBufferStrategy(2);
 		bufferStrategy = canvas.getBufferStrategy();
 	}
-	
-	private static void initWorld() {
-		int ent = world.addEntity();
-		world.set(ent, World.POSITION_X, 0.0f);
-		world.set(ent, World.POSITION_Y, 0.0f);
-		
-		world.set(ent, World.VELOCITY_X, 3.0f);
-		world.set(ent, World.VELOCITY_Y, 3.0f);
-		
-		world.set(ent, World.COLOR_B, 1.0f);
-		
-		world.set(ent, World.DIMENSION_X, 10.0f);
-		world.set(ent, World.DIMENSION_Y, 10.0f);
-		
-		ent = world.addEntity();
-		world.set(ent, World.POSITION_X, 0.0f);
-		world.set(ent, World.POSITION_Y, 0.0f);
-		
-		world.set(ent, World.VELOCITY_X, -3.0f);
-		world.set(ent, World.VELOCITY_Y, 2.0f);
-		
-		world.set(ent, World.COLOR_R, 1.0f);
-		
-		world.set(ent, World.DIMENSION_X, 10.0f);
-		world.set(ent, World.DIMENSION_Y, 10.0f);
-		
-		crosshairID = world.addEntity();
-		world.set(crosshairID, World.COLOR_G, 1.0f);
-		world.set(crosshairID, World.DIMENSION_X, 20.0f);
-		world.set(crosshairID, World.DIMENSION_Y, 20.0f);
-	}
 
 	private static void run(float dt) {
-		world.set(crosshairID, World.POSITION_X, mouseX);
-		world.set(crosshairID, World.POSITION_Y, mouseY);
-		
-		world.update(dt);
+		game.update(dt);
 		
 		Graphics2D g = (Graphics2D) bufferStrategy.getDrawGraphics();
 		
@@ -116,7 +80,7 @@ public class Shell {
 		
 		// Then let world render itself
 		g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-		world.draw(dt, g);
+		game.draw(dt, g);
 
 		g.dispose();
 		bufferStrategy.show();
