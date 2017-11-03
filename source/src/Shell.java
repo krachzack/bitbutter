@@ -19,11 +19,13 @@ public class Shell {
 	
 	private static BufferStrategy bufferStrategy;
 	private static Canvas canvas;
-	private static Game game;
+	private static Mechanics game;
+	private static World world;
 	
 	public static void main(String[] args) {
 		initWindow();
-		game = new Game();
+		world = new World();
+		game = new Mechanics(world);
 		
 		long lastFrameTime = System.nanoTime();
 		while(true) {
@@ -80,7 +82,7 @@ public class Shell {
 		
 		// Then let world render itself
 		g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-		game.draw(dt, g);
+		world.draw(dt, g);
 
 		g.dispose();
 		bufferStrategy.show();

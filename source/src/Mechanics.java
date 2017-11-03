@@ -1,19 +1,18 @@
 import java.awt.Graphics2D;
 
-public class Game {
+public class Mechanics {
 
 	public static final float PLAYER_SPEED = 200;
 	
 	private World world;
 	private int playerID;
 	
-	public Game() {
+	public Mechanics(World world) {
+		this.world = world;
 		initWorld();
 	}
 	
 	private void initWorld() {
-		world = new World();
-		
 		playerID = world.addEntity();
 		world.set(playerID, World.DIMENSION_X, 10.0f);
 		world.set(playerID, World.DIMENSION_Y, 10.0f);
@@ -21,8 +20,12 @@ public class Game {
 	}
 	
 	public void update(float dt) {
-		world.update(dt);
+		movePlayerTowardsMouse();
 		
+		world.update(dt);
+	}
+
+	private void movePlayerTowardsMouse() {
 		float playerX = world.get(playerID, World.POSITION_X);
 		float playerY = world.get(playerID, World.POSITION_Y);
 		
@@ -34,10 +37,6 @@ public class Game {
 		
 		world.set(playerID, World.VELOCITY_X, velX);
 		world.set(playerID, World.VELOCITY_Y, velY);
-	}
-
-	public void draw(float dt, Graphics2D g) {
-		world.draw(dt, g);
 	}
 	
 }
