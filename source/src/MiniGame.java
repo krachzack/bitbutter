@@ -8,15 +8,24 @@ import javax.swing.JFrame;
 
 public class MiniGame {
 	
-	private static final int WIDTH = 800;
-	private static final int HEIGHT = 600;
+	public static final int WIDTH = 800;
+	public static final int HEIGHT = 600;
 	private static BufferStrategy bufferStrategy;
-
+	private static World world = new World();
+	
+	
 	public static void main(String[] args) {
 		initWindow();
+		initWorld();
 		
+		long lastFrameTime = System.nanoTime();
 		while(true) {
-			run();
+			long thisFrameTime = System.nanoTime();
+			float dt = (thisFrameTime - lastFrameTime) / 1_000_000_000.0f;
+			
+			run(dt);
+			
+			lastFrameTime = thisFrameTime;
 		}
 	}
 
@@ -35,20 +44,51 @@ public class MiniGame {
 		canvas.createBufferStrategy(2);
 		bufferStrategy = canvas.getBufferStrategy();
 	}
+	
+	private static void initWorld() {
+		int ent = world.addEntity();
+		world.set(ent, World.POSITION_X, 0.0f);
+		world.set(ent, World.POSITION_Y, 0.0f);
+		
+		world.set(ent, World.VELOCITY_X, 3.0f);
+		world.set(ent, World.VELOCITY_Y, 3.0f);
+		
+		world.set(ent, World.COLOR_B, 1.0f);
+		
+		world.set(ent, World.DIMENSION_X, 10.0f);
+		world.set(ent, World.DIMENSION_Y, 10.0f);
+		
+		ent = world.addEntity();
+		world.set(ent, World.POSITION_X, 0.0f);
+		world.set(ent, World.POSITION_Y, 0.0f);
+		
+		world.set(ent, World.VELOCITY_X, -3.0f);
+		world.set(ent, World.VELOCITY_Y, 2.0f);
+		
+		world.set(ent, World.COLOR_R, 1.0f);
+		
+		world.set(ent, World.DIMENSION_X, 10.0f);
+		world.set(ent, World.DIMENSION_Y, 10.0f);
+	}
 
-	private static void run() {
+	private static void run(float dt) {
+		world.update(dt);
+		
 		Graphics2D g = (Graphics2D) bufferStrategy.getDrawGraphics();
 		
-		draw(g);
+		// Draw the background first
+		g.setColor(Color.WHITE);
+		g.fillRect(0, 0, WIDTH, HEIGHT);
+		
+		g.setColor(Color.DARK_GRAY);
+		g.drawLine(WIDTH/2, 0, WIDTH/2, HEIGHT);
+		g.drawLine(0, HEIGHT/2, WIDTH, HEIGHT/2);
+		
+		// Then let world render itself
+		world.draw(dt, g);
 
 		g.dispose();
 		bufferStrategy.show();
-	}
-
-	private static void draw(Graphics2D g) {
-		int color = (int) Math.abs(255 * Math.sin(System.currentTimeMillis() / 1000.0));
-		g.setColor(new Color(color, color, color));
-		g.fillRect(0, 0, WIDTH, HEIGHT);
 	}
 	
 }
