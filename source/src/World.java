@@ -56,16 +56,6 @@ public class World {
 		entities[id*ENTITY_SIZE + IN_USE] = 1.0f;
 		
 		return id;
-		
-		/*if(id == -1) {
-			id = entityCount++;
-		}
-		
-		if((id*ENTITY_SIZE) >= entities.length) {
-			float[] oldEntities = entities;
-			entities = new float[(id + 12) * ENTITY_SIZE];
-			System.arraycopy(oldEntities, 0, entities, 0, oldEntities.length);
-		}*/
 	}
 	
 	public void removeEntity(int id) {

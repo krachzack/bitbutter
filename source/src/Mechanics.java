@@ -17,6 +17,8 @@ public class Mechanics {
 		world.set(playerID, World.DIMENSION_X, 10.0f);
 		world.set(playerID, World.DIMENSION_Y, 10.0f);
 		world.set(playerID, World.COLOR_R, 1.0f);
+		world.set(playerID, World.COLOR_G, 0.3f);
+		world.set(playerID, World.COLOR_B, 0.3f);
 	}
 	
 	private void initParticles() {

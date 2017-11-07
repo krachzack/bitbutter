@@ -106,7 +106,7 @@ public class Shell {
 		Graphics2D g = (Graphics2D) bufferStrategy.getDrawGraphics();
 		
 		// Draw the background first
-		g.setColor(Color.WHITE);
+		g.setColor(new Color(0.8f, 0.8f, 0.8f));
 		g.fillRect(0, 0, WIDTH, HEIGHT);
 		
 		g.setColor(Color.DARK_GRAY);
