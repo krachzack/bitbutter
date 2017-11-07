@@ -17,6 +17,7 @@ public class Mechanics {
 
 	private void initPlayer() {
 		playerID = world.addEntity();
+		
 		world.set(playerID, World.DIMENSION_X, 10.0f);
 		world.set(playerID, World.DIMENSION_Y, 10.0f);
 		world.set(playerID, World.COLOR_R, 1.0f);
@@ -61,8 +62,12 @@ public class Mechanics {
 	public void update(float dt) {
 		if(Shell.mousePressed) {
 			world.setTimeReverse(true);
+		} else if(Shell.rightMousePressed) {
+			setPlayerReversed(true);
 		} else {
 			world.setTimeReverse(false);
+			setPlayerReversed(false);
+			
 			movePlayerTowardsMouse();
 			updateParticles();
 			
@@ -74,6 +79,15 @@ public class Mechanics {
 		}
 		
 		world.update(dt);
+	}
+	
+	private void setPlayerReversed(boolean yes) {
+		float val = yes ? 1.0f : 0.0f;
+		
+		world.set(playerID, World.REVERSED, val);
+		for(int particle: particles) {
+			world.set(particle, World.REVERSED, val);
+		}
 	}
 
 	private void updateParticles() {

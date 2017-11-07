@@ -19,12 +19,15 @@ public class World {
 	
 	public static final int IN_USE = 9;
 	
+	public static final int REVERSED = 10;
+	
 	private static final int POSITION_SIZE = 2;
 	private static final int VELOCITY_SIZE = 2;
 	private static final int COLOR_SIZE = 3;
 	private static final int DIMENSION_SIZE = 2;
 	private static final int IN_USE_SIZE = 1;
-	private static final int ENTITY_SIZE = POSITION_SIZE + VELOCITY_SIZE + COLOR_SIZE + DIMENSION_SIZE + IN_USE_SIZE;
+	private static final int REVERSED_SIZE = 1;
+	private static final int ENTITY_SIZE = POSITION_SIZE + VELOCITY_SIZE + COLOR_SIZE + DIMENSION_SIZE + IN_USE_SIZE + REVERSED_SIZE;
 	
 	private static final int ENTITY_COUNT_MAX = 512;
 	private static final int PAST_FRAMES_MAX = 1000;
@@ -45,6 +48,7 @@ public class World {
 				// Is not in use, use or re-use the ID
 				id = inUseIdx / ENTITY_SIZE;
 				Arrays.fill(entities, id*ENTITY_SIZE, (id+1)*ENTITY_SIZE, 0.0f);
+				break;
 			}
 		}
 		
@@ -80,17 +84,32 @@ public class World {
 				timeReverse = false;
 			}
 		} else {
+			move(dt);
+			timeReverse(dt);
+			
 			// Archive the old frame
 			System.arraycopy(entities, 0, entities, ENTITY_COUNT_MAX*ENTITY_SIZE, entities.length - (ENTITY_COUNT_MAX*ENTITY_SIZE));
 			++pastFrameCount;
-			
-			move(dt);
+		}
+	}
+
+	private void timeReverse(float dt) {
+		for(int offset = 0; offset < (ENTITY_COUNT_MAX*ENTITY_SIZE); offset += ENTITY_SIZE) {
+			if(entities[offset + IN_USE] == 1.0f && entities[offset + REVERSED] == 1.0f) {
+				for(int i = 0; i < (PAST_FRAMES_MAX-1); ++i) {
+					System.arraycopy(entities, offset + (i+1) * (ENTITY_COUNT_MAX*ENTITY_SIZE), entities, offset + i * (ENTITY_COUNT_MAX*ENTITY_SIZE), ENTITY_SIZE);
+				}
+				// Do it twice since we archived a frame before
+				for(int i = 0; i < (PAST_FRAMES_MAX-1); ++i) {
+					System.arraycopy(entities, offset + (i+1) * (ENTITY_COUNT_MAX*ENTITY_SIZE), entities, offset + i * (ENTITY_COUNT_MAX*ENTITY_SIZE), ENTITY_SIZE);
+				}
+			}
 		}
 	}
 
 	private void move(float dt) {
 		for(int offset = 0; offset < (ENTITY_COUNT_MAX*ENTITY_SIZE); offset += ENTITY_SIZE) {
-			if(entities[offset + IN_USE] == 1.0f) {
+			if(entities[offset + IN_USE] == 1.0f && entities[offset + REVERSED] == 0.0f) {
 				entities[offset + POSITION_X] += dt * entities[offset + VELOCITY_X];
 				entities[offset + POSITION_Y] += dt * entities[offset + VELOCITY_Y];
 			}

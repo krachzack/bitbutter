@@ -20,9 +20,13 @@ public class Shell {
 	
 	public static boolean mousePressed;
 	public static boolean mouseReleased;
+	public static boolean rightMousePressed;
+	public static boolean rightMouseReleased;
 	
 	private static boolean mousePressedNextFrame;
+	private static boolean rightMousePressedNextFrame;
 	private static boolean mouseReleasedNextFrame;
+	private static boolean rightMouseReleasedNextFrame;
 	
 	public static final int WIDTH = 800;
 	public static final int HEIGHT = 600;
@@ -31,6 +35,8 @@ public class Shell {
 	private static Canvas canvas;
 	private static Mechanics mech;
 	private static World world;
+	
+	private static final float TARGET_DELTA_TIME = 0.016f;
 	
 	public static void main(String[] args) {
 		initWindow();
@@ -59,16 +65,32 @@ public class Shell {
 	private static void initMouseClicks() {
 		Toolkit.getDefaultToolkit().addAWTEventListener(new AWTEventListener() {	
 			@Override
-			public void eventDispatched(AWTEvent event) {
+			public void eventDispatched(AWTEvent awtEvent) {
+				MouseEvent event = (MouseEvent) awtEvent;
+				
 				synchronized (Shell.class) {
 					if(event.getID() == MouseEvent.MOUSE_PRESSED) {
-						mousePressedNextFrame = true;
+						if(event.getButton() == MouseEvent.BUTTON1) {
+							mousePressedNextFrame = true;
+						} else {
+							rightMousePressedNextFrame = true;
+						}
 					} else if(event.getID() == MouseEvent.MOUSE_RELEASED) {
-						mousePressedNextFrame = false;
-						mouseReleasedNextFrame = true;
+						if(event.getButton() == MouseEvent.BUTTON1) {
+							mousePressedNextFrame = false;
+							mouseReleasedNextFrame = true;
+						} else {
+							rightMousePressedNextFrame = false;
+							rightMouseReleasedNextFrame = true;
+						}
 					} else {
-						mousePressedNextFrame = false;
-						mouseReleasedNextFrame = false;
+						if(event.getButton() == MouseEvent.BUTTON1) {
+							mousePressedNextFrame = false;
+							mouseReleasedNextFrame = false;
+						} else {
+							rightMousePressedNextFrame = false;
+							rightMouseReleasedNextFrame = false;
+						}
 					}
 				}
 			}
@@ -84,6 +106,9 @@ public class Shell {
 		synchronized (Shell.class) {
 			mousePressed = mousePressedNextFrame;
 			mouseReleased = mouseReleasedNextFrame;
+			
+			rightMousePressed = rightMousePressedNextFrame;
+			rightMouseReleased = rightMouseReleasedNextFrame;
 		}
 	}
 
