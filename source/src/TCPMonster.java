@@ -1,9 +1,10 @@
 import java.io.*;
 import java.net.*;
+import java.util.Scanner;
 
 class TCPMonster {
-	private static final boolean isClient = true;
 	private static final int UPDATE_INTERVAL = 1000;
+	private static final int SERVER_PORT = 40000;
 	
 	// Placeholder data structure; Better divide data into more than one array
 	// Should contain all relevant position data in the game
@@ -14,11 +15,16 @@ class TCPMonster {
 	private static String username = "Shaendro";
 
 	public static void main(String argv[]) throws Exception {
+		System.out.println("Are you trying to start a client? (true/false)");
+		Scanner s = new Scanner(System.in);
+		boolean isClient = Boolean.parseBoolean(s.nextLine());
+		s.close();
+		
 		if (isClient) startServerSync();
 		else {
 			ServerSocket sSocket = null;
 			try {
-				sSocket = new ServerSocket(4096);
+				sSocket = new ServerSocket(SERVER_PORT);
 				while (true) {
 					Socket cSocket = sSocket.accept();
 					UniversalDTO request = (UniversalDTO) new ObjectInputStream(cSocket.getInputStream()).readObject();
@@ -37,7 +43,7 @@ class TCPMonster {
 		Socket clientSocket = null;
 		UniversalDTO response = null;
 		try {
-			clientSocket = new Socket("localhost", 4096);
+			clientSocket = new Socket("localhost", SERVER_PORT);
 			new ObjectOutputStream(clientSocket.getOutputStream()).writeObject(new UniversalDTO(gameId, username, event, data[gameId]));
 			response = (UniversalDTO) new ObjectInputStream(clientSocket.getInputStream()).readObject();
 		} catch (Exception e) {
@@ -57,7 +63,7 @@ class TCPMonster {
 			Socket clientSocket = null;
 			UniversalDTO response = null;
 			try {
-				clientSocket = new Socket("localhost", 4096);
+				clientSocket = new Socket("localhost", SERVER_PORT);
 				new ObjectOutputStream(clientSocket.getOutputStream()).writeObject(new UniversalDTO(gameId, username, "Join", null));
 				while (true) {
 					response = (UniversalDTO) new ObjectInputStream(clientSocket.getInputStream()).readObject();				
@@ -94,6 +100,9 @@ class TCPMonster {
 		}).start();
 	}
 	
+	/**
+	 * Encompasses the data transferred between the TCP server and client
+	 */
 	
 	private static class UniversalDTO implements Serializable {
 		private static final long serialVersionUID = -4143190306637532691L;
