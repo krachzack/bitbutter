@@ -29,13 +29,13 @@ public class Shell {
 	
 	private static BufferStrategy bufferStrategy;
 	private static Canvas canvas;
-	private static Mechanics game;
+	private static Mechanics mech;
 	private static World world;
 	
 	public static void main(String[] args) {
 		initWindow();
 		world = new World();
-		game = new Mechanics(world);
+		mech = new Mechanics(world);
 		
 		Toolkit.getDefaultToolkit().addAWTEventListener(new AWTEventListener() {	
 			@Override
@@ -101,12 +101,12 @@ public class Shell {
 	}
 
 	private static void run(float dt) {
-		game.update(dt);
+		mech.update(dt);
 		
 		Graphics2D g = (Graphics2D) bufferStrategy.getDrawGraphics();
 		
 		// Draw the background first
-		g.setColor(mousePressed ? Color.BLACK : Color.WHITE);
+		g.setColor(Color.WHITE);
 		g.fillRect(0, 0, WIDTH, HEIGHT);
 		
 		g.setColor(Color.DARK_GRAY);

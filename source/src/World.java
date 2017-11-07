@@ -26,21 +26,38 @@ public class World {
 	private static final int IN_USE_SIZE = 1;
 	private static final int ENTITY_SIZE = POSITION_SIZE + VELOCITY_SIZE + COLOR_SIZE + DIMENSION_SIZE + IN_USE_SIZE;
 	
-	private float[] entities = new float[0];
-	private int entityCount = 0;
+	private static final int ENTITY_COUNT_MAX = 512;
+	private static final int PAST_FRAMES_MAX = 1000;
+	
+	private float[] entities = new float[ENTITY_SIZE * ENTITY_COUNT_MAX * PAST_FRAMES_MAX];
+	private int pastFrameCount = 0;
+	private boolean timeReverse;
+	
+	public void setTimeReverse(boolean timeReverse) {
+		this.timeReverse = timeReverse && pastFrameCount > 0;
+	}
 	
 	public int addEntity() {
 		int id = -1;
 		
-		for(int i = IN_USE; i < entities.length; i += ENTITY_SIZE) {
-			if(entities[i] == 0.0f) {
+		for(int inUseIdx = IN_USE; inUseIdx < (ENTITY_SIZE * ENTITY_COUNT_MAX); inUseIdx += ENTITY_SIZE) {
+			if(entities[inUseIdx] == 0.0f) {
 				// Is not in use, use or re-use the ID
-				id = i / ENTITY_SIZE;
+				id = inUseIdx / ENTITY_SIZE;
 				Arrays.fill(entities, id*ENTITY_SIZE, (id+1)*ENTITY_SIZE, 0.0f);
 			}
 		}
 		
 		if(id == -1) {
+			throw new OutOfMemoryError("Exceeded maximum entity count of " + ENTITY_COUNT_MAX);
+		}
+		
+		// Mark as in use
+		entities[id*ENTITY_SIZE + IN_USE] = 1.0f;
+		
+		return id;
+		
+		/*if(id == -1) {
 			id = entityCount++;
 		}
 		
@@ -48,12 +65,7 @@ public class World {
 			float[] oldEntities = entities;
 			entities = new float[(id + 12) * ENTITY_SIZE];
 			System.arraycopy(oldEntities, 0, entities, 0, oldEntities.length);
-		}
-		
-		// Mark as in use
-		entities[id*ENTITY_SIZE + IN_USE] = 1.0f;
-		
-		return id;
+		}*/
 	}
 	
 	public void removeEntity(int id) {
@@ -69,11 +81,25 @@ public class World {
 	}
 	
 	public void update(float dt) {
-		move(dt);
+		if(timeReverse) {
+			// Restore the old frame
+			System.arraycopy(entities, ENTITY_COUNT_MAX*ENTITY_SIZE, entities, 0, entities.length - (ENTITY_COUNT_MAX*ENTITY_SIZE));
+			--pastFrameCount;
+			
+			if(pastFrameCount == 0) {
+				timeReverse = false;
+			}
+		} else {
+			// Archive the old frame
+			System.arraycopy(entities, 0, entities, ENTITY_COUNT_MAX*ENTITY_SIZE, entities.length - (ENTITY_COUNT_MAX*ENTITY_SIZE));
+			++pastFrameCount;
+			
+			move(dt);
+		}
 	}
 
 	private void move(float dt) {
-		for(int offset = 0; offset < entities.length; offset += ENTITY_SIZE) {
+		for(int offset = 0; offset < (ENTITY_COUNT_MAX*ENTITY_SIZE); offset += ENTITY_SIZE) {
 			if(entities[offset + IN_USE] == 1.0f) {
 				entities[offset + POSITION_X] += dt * entities[offset + VELOCITY_X];
 				entities[offset + POSITION_Y] += dt * entities[offset + VELOCITY_Y];
@@ -89,11 +115,8 @@ public class World {
 		g.scale(1, -1);
 		AffineTransform baseTrans = g.getTransform();
 		
-		for(int offset = 0; offset < entities.length; offset += ENTITY_SIZE) {
+		for(int offset = 0; offset < (ENTITY_COUNT_MAX*ENTITY_SIZE); offset += ENTITY_SIZE) {
 			if(entities[offset + IN_USE] == 1.0) {
-				float posX = entities[offset + POSITION_X];
-				float posY = entities[offset + POSITION_Y];
-				
 				g.translate(entities[offset + POSITION_X], entities[offset + POSITION_Y]);
 				g.scale(entities[offset + DIMENSION_X] / 2, entities[offset + DIMENSION_Y] / 2);
 				

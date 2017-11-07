@@ -1,18 +1,10 @@
-import java.awt.Graphics2D;
-
 public class Mechanics {
 
 	public static final float PLAYER_SPEED = 200;
 	
 	private World world;
 	private int playerID;
-	private int[] particles = new int[100];
-	
-	private static final int HISTORY_LEN = 512;
-	private float[] mouseXHistory = new float[HISTORY_LEN];
-	private float[] mouseYHistory = new float[HISTORY_LEN];
-	private float[] dtHistory = new float[HISTORY_LEN];
-	private int historyIdx = 0;
+	private int[] particles = new int[80];
 	
 	public Mechanics(World world) {
 		this.world = world;
@@ -36,24 +28,15 @@ public class Mechanics {
 	}
 	
 	public void update(float dt) {
-		if((historyIdx + 1) == HISTORY_LEN) {
-			System.arraycopy(mouseXHistory, 1, mouseXHistory, 0, HISTORY_LEN-1);
-			System.arraycopy(mouseYHistory, 1, mouseYHistory, 0, HISTORY_LEN-1);
-			System.arraycopy(dtHistory, 1, dtHistory, 0, HISTORY_LEN-1);
+		if(Shell.mousePressed) {
+			world.setTimeReverse(true);
+		} else {
+			world.setTimeReverse(false);
+			movePlayerTowardsMouse();
+			updateParticles();
 		}
-		
-		mouseXHistory[historyIdx] = Shell.mouseX;
-		mouseYHistory[historyIdx] = Shell.mouseY;
-		dtHistory[historyIdx] = dt;
-		
-		movePlayerTowardsMouse();
-		updateParticles();
 		
 		world.update(dt);
-		
-		if((historyIdx + 1) < HISTORY_LEN) {
-			++historyIdx;
-		}
 	}
 
 	private void updateParticles() {
