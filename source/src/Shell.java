@@ -37,6 +37,26 @@ public class Shell {
 		world = new World();
 		mech = new Mechanics(world);
 		
+		initMouseClicks();
+		
+		long lastFrameTime = System.nanoTime();
+		while(true) {
+			long thisFrameTime = System.nanoTime();
+			float dt = (thisFrameTime - lastFrameTime) / 1_000_000_000.0f;
+			
+			if(dt > 0.0166666f) {
+				System.err.println("Delta time was long: " + dt + "s");
+			}
+			
+			locateMouse();
+			
+			run(dt);
+			
+			lastFrameTime = thisFrameTime;
+		}
+	}
+
+	private static void initMouseClicks() {
 		Toolkit.getDefaultToolkit().addAWTEventListener(new AWTEventListener() {	
 			@Override
 			public void eventDispatched(AWTEvent event) {
@@ -53,26 +73,9 @@ public class Shell {
 				}
 			}
 		}, AWTEvent.MOUSE_EVENT_MASK);
-		
-		long lastFrameTime = System.nanoTime();
-		while(true) {
-			long thisFrameTime = System.nanoTime();
-			float dt = (thisFrameTime - lastFrameTime) / 1_000_000_000.0f;
-			
-			if(dt > 0.166666f) {
-				System.err.println("Delta time was long: " + dt + "s");
-			}
-			
-			locateMouse();
-			
-			run(dt);
-			
-			lastFrameTime = thisFrameTime;
-		}
 	}
 
 	private static void locateMouse() {
-		
 		Point mousePos = MouseInfo.getPointerInfo().getLocation();
 		SwingUtilities.convertPointFromScreen(mousePos, canvas);
 		mouseX = mousePos.x - WIDTH / 2.0f;
@@ -109,9 +112,9 @@ public class Shell {
 		g.setColor(new Color(0.8f, 0.8f, 0.8f));
 		g.fillRect(0, 0, WIDTH, HEIGHT);
 		
-		g.setColor(Color.DARK_GRAY);
-		g.drawLine(WIDTH/2, 0, WIDTH/2, HEIGHT);
-		g.drawLine(0, HEIGHT/2, WIDTH, HEIGHT/2);
+//		g.setColor(Color.DARK_GRAY);
+//		g.drawLine(WIDTH/2, 0, WIDTH/2, HEIGHT);
+//		g.drawLine(0, HEIGHT/2, WIDTH, HEIGHT/2);
 		
 		// Then let world render itself
 		g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);

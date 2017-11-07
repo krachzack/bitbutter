@@ -5,14 +5,17 @@ public class Mechanics {
 	private World world;
 	private int playerID;
 	private int[] particles = new int[80];
+	private int[] traps = new int[10];
+	private float trapSpawnTime;
 	
 	public Mechanics(World world) {
 		this.world = world;
-		initWorld();
+		initPlayer();
 		initParticles();
+		//initTraps();
 	}
 
-	private void initWorld() {
+	private void initPlayer() {
 		playerID = world.addEntity();
 		world.set(playerID, World.DIMENSION_X, 10.0f);
 		world.set(playerID, World.DIMENSION_Y, 10.0f);
@@ -29,6 +32,32 @@ public class Mechanics {
 		}
 	}
 	
+	private void initTraps() {
+		for(int i = 0; i < traps.length; ++i) {
+			if(traps[i] != 0) {
+				world.removeEntity(traps[i]);
+			}
+			traps[i] = world.addEntity();
+			
+			float radius = (float) (20.0 * Math.min(Math.random() + 0.2, 1.0));
+			float x = (float) ((Math.random() - 0.5) * Shell.WIDTH);
+			float y = Shell.HEIGHT/2 + radius;
+			float vx = (float) ((2.0 * Math.random() - 1.0) * 30);
+			float vy = (float) ((-Math.random() - 0.1) * 30);
+			
+			world.set(traps[i], World.DIMENSION_X, 2*radius);
+			world.set(traps[i], World.DIMENSION_Y, 2*radius);
+			world.set(traps[i], World.POSITION_X, x);
+			world.set(traps[i], World.POSITION_Y, y);
+			world.set(traps[i], World.VELOCITY_X, vx);
+			world.set(traps[i], World.VELOCITY_Y, vy);
+			world.set(traps[i], World.COLOR_R, 0.1f);
+			world.set(traps[i], World.COLOR_G, 0.1f);
+			world.set(traps[i], World.COLOR_B, 0.1f);
+			world.set(traps[i], World.POSITION_Y, y);
+		}
+	}
+
 	public void update(float dt) {
 		if(Shell.mousePressed) {
 			world.setTimeReverse(true);
@@ -36,6 +65,12 @@ public class Mechanics {
 			world.setTimeReverse(false);
 			movePlayerTowardsMouse();
 			updateParticles();
+			
+			trapSpawnTime -= dt;
+			if(trapSpawnTime < 0) {
+				trapSpawnTime = 15.0f;
+				initTraps();
+			}
 		}
 		
 		world.update(dt);
