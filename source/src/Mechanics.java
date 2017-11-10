@@ -23,6 +23,8 @@ public class Mechanics {
 		world.set(playerID, World.COLOR_R, 1.0f);
 		world.set(playerID, World.COLOR_G, 0.3f);
 		world.set(playerID, World.COLOR_B, 0.3f);
+		world.set(playerID, World.COLLISION_ENABLED, 1.0f);
+		world.set(playerID, World.KIND, World.KIND_VAL_PLAYER);
 	}
 	
 	private void initParticles() {
@@ -56,6 +58,8 @@ public class Mechanics {
 			world.set(traps[i], World.COLOR_G, 0.1f);
 			world.set(traps[i], World.COLOR_B, 0.1f);
 			world.set(traps[i], World.POSITION_Y, y);
+			world.set(traps[i], World.COLLISION_ENABLED, 1.0f);
+			world.set(traps[i], World.KIND, World.KIND_VAL_TRAP);
 		}
 	}
 

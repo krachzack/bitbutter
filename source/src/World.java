@@ -21,13 +21,22 @@ public class World {
 	
 	public static final int REVERSED = 10;
 	
+	public static final int COLLISION_ENABLED = 11;
+	
+	public static final int KIND = 12;
+	
+	public static final float KIND_VAL_PLAYER = 0.0f;
+	public static final float KIND_VAL_TRAP = 1.0f;
+	
 	private static final int POSITION_SIZE = 2;
 	private static final int VELOCITY_SIZE = 2;
 	private static final int COLOR_SIZE = 3;
 	private static final int DIMENSION_SIZE = 2;
 	private static final int IN_USE_SIZE = 1;
 	private static final int REVERSED_SIZE = 1;
-	private static final int ENTITY_SIZE = POSITION_SIZE + VELOCITY_SIZE + COLOR_SIZE + DIMENSION_SIZE + IN_USE_SIZE + REVERSED_SIZE;
+	private static final int COLLISION_ENABLED_SIZE = 1;
+	private static final int KIND_SIZE = 1;
+	private static final int ENTITY_SIZE = POSITION_SIZE + VELOCITY_SIZE + COLOR_SIZE + DIMENSION_SIZE + IN_USE_SIZE + REVERSED_SIZE + COLLISION_ENABLED_SIZE + KIND_SIZE;
 	
 	private static final int ENTITY_COUNT_MAX = 512;
 	private static final int PAST_FRAMES_MAX = 1000;
@@ -84,12 +93,60 @@ public class World {
 				timeReverse = false;
 			}
 		} else {
-			move(dt);
+			integratePosition(dt);
 			timeReverse(dt);
+			detectAndRespondToCollisions(dt);
 			
 			// Archive the old frame
 			System.arraycopy(entities, 0, entities, ENTITY_COUNT_MAX*ENTITY_SIZE, entities.length - (ENTITY_COUNT_MAX*ENTITY_SIZE));
 			++pastFrameCount;
+		}
+	}
+
+	/**
+	 * Performs roughly O(n^2) algorithm to find collisions.
+	 * 
+	 * Collision circles have a radius equal to the larger of the two dimensions.
+	 * Only entities with COLLISION_ENABLED set to 1.0f will be considered.
+	 * 
+	 * @param dt
+	 */
+	private void detectAndRespondToCollisions(float dt) {
+		for(int ent1Offset = 0; ent1Offset < (ENTITY_COUNT_MAX*ENTITY_SIZE); ent1Offset += ENTITY_SIZE) {
+			if(entities[ent1Offset + IN_USE] == 1.0f && entities[ent1Offset + COLLISION_ENABLED] == 1.0f) {
+				for(int ent2Offset = ent1Offset + ENTITY_SIZE; ent2Offset < (ENTITY_COUNT_MAX*ENTITY_SIZE); ent2Offset += ENTITY_SIZE) {
+					if(entities[ent2Offset + IN_USE] == 1.0f && entities[ent2Offset + COLLISION_ENABLED] == 1.0f) {
+						// Diameter is halved to find radius
+						float radiusSum = 0.5f * (
+								Math.max(entities[ent1Offset + DIMENSION_X], entities[ent1Offset + DIMENSION_Y])
+								+
+								Math.max(entities[ent2Offset + DIMENSION_X], entities[ent2Offset + DIMENSION_Y])
+						);
+						float squaredRadiusSum = radiusSum * radiusSum;
+						
+						float distanceX = entities[ent2Offset + POSITION_X] - entities[ent1Offset + POSITION_X];
+						float distanceY = entities[ent2Offset + POSITION_Y] - entities[ent1Offset + POSITION_Y];
+						float squaredDistance = distanceX * distanceX + distanceY * distanceY;
+						
+						if(squaredDistance <= squaredRadiusSum) {
+							respondToCollision(ent1Offset, ent2Offset);
+						}
+					}
+				}
+			}
+		}
+	}
+
+	private void respondToCollision(int ent1Offset, int ent2Offset) {
+		// This assumes ent1Offset is always lower than ent2Offset and that the player has the lowest possible ID
+		if(
+			entities[ent1Offset + KIND] == KIND_VAL_PLAYER &&
+			entities[ent2Offset + KIND] == KIND_VAL_TRAP
+		) {
+			// Delete the entity with higher ID, which is a trap
+			entities[ent2Offset + IN_USE] = 0.0f;
+			
+			System.out.println((ent2Offset / ENTITY_SIZE) + " was deleted due to collision!");
 		}
 	}
 
@@ -107,7 +164,7 @@ public class World {
 		}
 	}
 
-	private void move(float dt) {
+	private void integratePosition(float dt) {
 		for(int offset = 0; offset < (ENTITY_COUNT_MAX*ENTITY_SIZE); offset += ENTITY_SIZE) {
 			if(entities[offset + IN_USE] == 1.0f && entities[offset + REVERSED] == 0.0f) {
 				entities[offset + POSITION_X] += dt * entities[offset + VELOCITY_X];
