@@ -29,6 +29,11 @@ class TCPMonster {
 					Socket cSocket = sSocket.accept();
 					UniversalDTO request = (UniversalDTO) new ObjectInputStream(cSocket.getInputStream()).readObject();
 					if (request.getEvent().equals("Join")) threadedUpdate(cSocket, request);
+					else if (request.getEvent().equals("CollisionTrap")) {
+						
+					} else if (request.getEvent().equals("CollisionProjectile")) {
+						
+					}
 				}
 			} catch (Exception e) {
 				e.printStackTrace();
@@ -39,7 +44,7 @@ class TCPMonster {
 	}
 
 	/**
-	 * Starts a {@link Thread} for a single client
+	 * Starts a {@link Thread} to respond to a single client
 	 * @param cSocket The {@link Socket} connected to the client
 	 * @param request The {@link UniversalDTO} the client sent
 	 */
@@ -88,20 +93,16 @@ class TCPMonster {
 	 * @param event A {@link String} that describes the event
 	 * @return The {@link UniversalDTO} returned by the server
 	 */
-	public static UniversalDTO notifyServer(String event) {
+	public static void notifyServer(String event) {
 		Socket clientSocket = null;
-		UniversalDTO response = null;
 		try {
 			clientSocket = new Socket("localhost", SERVER_PORT);
 			new ObjectOutputStream(clientSocket.getOutputStream()).writeObject(new UniversalDTO(username, event, data));
-			response = (UniversalDTO) new ObjectInputStream(clientSocket.getInputStream()).readObject();
 		} catch (Exception e) {
 			e.printStackTrace();
 		} finally {
 			try { clientSocket.close(); } catch (IOException e) {}
-			if (response == null) response = new UniversalDTO("Server", "Connection Failure", null);
 		}
-		return response;
 	}
 	
 	/**
