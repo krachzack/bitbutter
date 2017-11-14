@@ -1,25 +1,20 @@
 import java.io.*;
 import java.net.*;
-import java.util.Scanner;
+import java.util.HashMap;
 
 class TCPMonster {
 	private static final int UPDATE_INTERVAL = 1000;
 	private static final int SERVER_PORT = 40000;
+	private static final int MAX_PLAYERS = 100;
 	
 	private static float[][] data = new float[100][];
+	private static HashMap<String, Integer> users = new HashMap<String, Integer>();
 	
 	private static String username = "User";
-
-	public static void main(String argv[]) {
-		System.out.println("Are you trying to start a client? (true/false)");
-		Scanner s = new Scanner(System.in);
-		boolean isClient = Boolean.parseBoolean(s.nextLine());
-		s.close();
-		
-		if (isClient) startServerSync();
-		else startServer();
-	}
 	
+	/**
+	 * Starts the a server in a separate {@link Thread} and waits for requests
+	 */
 	public static void startServer() {
 		new Thread(() -> {
 			ServerSocket sSocket = null;
@@ -30,9 +25,17 @@ class TCPMonster {
 					UniversalDTO request = (UniversalDTO) new ObjectInputStream(cSocket.getInputStream()).readObject();
 					if (request.getEvent().equals("Join")) threadedUpdate(cSocket, request);
 					else if (request.getEvent().equals("CollisionTrap")) {
-						
+						// Lower player score
+						// Spawn collectibles around trap
+						// Remove trap
+						// (Respawn player)
+						int userId = users.get(request.getUsername());
+						int trapId = (int) request.getData()[0][0];
 					} else if (request.getEvent().equals("CollisionProjectile")) {
-						
+						// Remove bullet
+						// Initiate time reversal for the player
+						int userId = users.get(request.getUsername());
+						int bulletId = (int) request.getData()[0][0];
 					}
 				}
 			} catch (Exception e) {
@@ -52,6 +55,7 @@ class TCPMonster {
 		new Thread(() -> {
 			try {
 				System.out.println(request.getUsername() + ": Joined");
+				storeUser(request.getUsername());
 				while (true) {
 					new ObjectOutputStream(cSocket.getOutputStream()).writeObject(new UniversalDTO("Server", "Update", data));
 					System.out.println(request.getUsername() + ": Update");
@@ -59,6 +63,7 @@ class TCPMonster {
 				}
 			} catch (SocketException e) {
 				System.out.println(request.getUsername() + ": Left");
+				users.remove(request.getUsername());
 			} catch (Exception e) { 
 				e.printStackTrace();
 			}
@@ -103,6 +108,20 @@ class TCPMonster {
 		} finally {
 			try { clientSocket.close(); } catch (IOException e) {}
 		}
+	}
+	
+	/**
+	 * Finds a cozy spot for a new user inside the user {@link HashMap}
+	 * @param username The username specified by the user
+	 */
+	private static void storeUser(String username) {
+		for (int i = 0; i < MAX_PLAYERS; i++) {
+			if (!users.containsValue(i)) {
+				users.put(username, i);
+				return;
+			}
+		}
+		System.out.println("Player maximum reached. New player could not be added.");
 	}
 	
 	/**
