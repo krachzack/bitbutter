@@ -24,7 +24,7 @@ import java.util.WeakHashMap;
  */
 public class Server implements Runnable {
 	
-	public static final InetSocketAddress SERVER_ADDR = new InetSocketAddress("localhost", 40000);
+	public static final InetSocketAddress SERVER_ADDR = new InetSocketAddress("0.0.0.0", 40000);
 	
 	/**
 	 * Indicates how often the server should update world state and send it to clients.
