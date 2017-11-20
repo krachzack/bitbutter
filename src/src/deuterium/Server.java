@@ -42,8 +42,9 @@ public class Server implements Runnable {
 	 * the player ID should also be removed from the world
 	 */
 	private Map<SocketChannel, Integer> clientIdentities = new WeakHashMap<>();
-	private Map<SocketChannel, ByteBuffer> clientUpdateBufs = new WeakHashMap<>();
+	private Map<SocketChannel, ByteBuffer> fromClientUpdateBufs = new WeakHashMap<>();
 	private Map<SocketChannel, int[]> clientParticles = new WeakHashMap<>();
+	private Map<SocketChannel, ByteBuffer> toClientUpdateBufs = new WeakHashMap<>();
 	private World world;
 	
 	public void terminate() {
@@ -67,7 +68,7 @@ public class Server implements Runnable {
 			long lastFrameTime = System.nanoTime();
 			while(run) {
 				// TODO set timeout and do this to sync game loop
-				handleIncomingNetworkData();
+				handleNetworkData();
 				
 				long thisFrameTime = System.nanoTime();
 				float dt = (thisFrameTime - lastFrameTime) / 1_000_000_000.0f;
@@ -111,7 +112,7 @@ public class Server implements Runnable {
 		}
 	}
 
-	private void handleIncomingNetworkData() throws IOException {
+	private void handleNetworkData() throws IOException {
 		selector.select((long) (SERVER_UPDATE_INTERVAL * 1_000)); // Wait for IO event
 		
 		Iterator<SelectionKey> it = selector.selectedKeys().iterator();
@@ -121,10 +122,18 @@ public class Server implements Runnable {
 			
 			if(!key.isValid()) {
 				continue;
-			} else if(key.isAcceptable()) {
+			}
+			
+			if(key.isAcceptable()) {
 				accept(key);
-			} else if(key.isReadable()) {
+			}
+			
+			if(key.isReadable()) {
 				read(key);
+			}
+			
+			if(key.isWritable()) {
+				write(key);
 			}
 		}
 	}
@@ -160,7 +169,7 @@ public class Server implements Runnable {
 		channel.configureBlocking(false);
 		clientChannels.add(channel);
 		System.out.println(clientChannels.size());
-		channel.register(selector, SelectionKey.OP_READ);
+		channel.register(selector, SelectionKey.OP_READ | SelectionKey.OP_WRITE);
 		
 		int playerID = world.addEntity();
 		world.set(playerID, World.DIMENSION_X, 10.0f);
@@ -200,7 +209,7 @@ public class Server implements Runnable {
 			channel.close();
 			key.cancel();
 		} else {
-			ByteBuffer updateBuf = clientUpdateBufs.get(channel);
+			ByteBuffer updateBuf = fromClientUpdateBufs.get(channel);
 			readBuf.flip();
 			
 			while(readBuf.remaining() > 0) {
@@ -226,7 +235,7 @@ public class Server implements Runnable {
 			
 			// If there is an unfinished updateBuf, keep it for the next read,
 			// if it is finished and decoded, put the null so it isnt read twice
-			clientUpdateBufs.put(channel, updateBuf);
+			fromClientUpdateBufs.put(channel, updateBuf);
 		}
 	}
 	
@@ -239,12 +248,29 @@ public class Server implements Runnable {
 
 	private void broadcast(ByteBuffer buf) {
 		for(SocketChannel aClient : clientChannels) {
-        	try {
-				aClient.write(buf.asReadOnlyBuffer());
+			ByteBuffer updateBuf = toClientUpdateBufs.get(aClient);
+			
+			if(updateBuf == null) {
+				toClientUpdateBufs.put(aClient, buf.asReadOnlyBuffer());
+			}
+        }
+	}
+
+	private void write(SelectionKey key) {
+		SocketChannel channel = (SocketChannel) key.channel();
+		ByteBuffer pendingBuf = toClientUpdateBufs.get(channel);
+
+		if(pendingBuf != null) {
+			try {
+				channel.write(pendingBuf);
+				
+				if(pendingBuf.remaining() == 0) {
+					toClientUpdateBufs.remove(channel);
+				}
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
-        }
+		}
 	}
 
 }
