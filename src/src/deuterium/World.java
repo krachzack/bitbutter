@@ -41,7 +41,7 @@ public class World {
 	private static final int KIND_SIZE = 1;
 	private static final int ENTITY_SIZE = POSITION_SIZE + VELOCITY_SIZE + COLOR_SIZE + DIMENSION_SIZE + IN_USE_SIZE + REVERSED_SIZE + COLLISION_ENABLED_SIZE + KIND_SIZE;
 	
-	private static final int ENTITY_COUNT_MAX = 512;
+	private static final int ENTITY_COUNT_MAX = 128;
 	private static final int PAST_FRAMES_MAX = 1000;
 	
 	public float[] entities = new float[ENTITY_SIZE * ENTITY_COUNT_MAX * PAST_FRAMES_MAX];
