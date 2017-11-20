@@ -60,7 +60,7 @@ public class Main {
 
 	private static String discoverServer() {
 		try {
-			MulticastSocket discoverSocket = new MulticastSocket(DISCOVERY_MULTICAST_GROUP.getPort());
+			MulticastSocket discoverSocket = new MulticastSocket(DISCOVERY_MULTICAST_GROUP.getPort()+1);
 			
 			discoverSocket.joinGroup(DISCOVERY_MULTICAST_GROUP.getAddress());
 			discoverSocket.setSoTimeout(DISCOERY_TIMEOUT_MS);
@@ -87,7 +87,7 @@ public class Main {
 	private static void makeLocalServerDiscoverable() {
 		new Thread(() -> {
 			try {
-				MulticastSocket publishSock = new MulticastSocket(DISCOVERY_MULTICAST_GROUP.getPort());
+				MulticastSocket publishSock = new MulticastSocket(DISCOVERY_MULTICAST_GROUP.getPort()+1);
 				
 				while(true) {
 					publishSock.send(new DatagramPacket(new byte[] { 42, 24 }, 2, DISCOVERY_MULTICAST_GROUP));
