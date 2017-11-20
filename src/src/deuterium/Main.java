@@ -60,7 +60,7 @@ public class Main {
 
 	private static String discoverServer() {
 		try {
-			MulticastSocket discoverSocket = new MulticastSocket();
+			MulticastSocket discoverSocket = new MulticastSocket(DISCOVERY_MULTICAST_GROUP.getPort());
 			
 			discoverSocket.joinGroup(DISCOVERY_MULTICAST_GROUP.getAddress());
 			discoverSocket.setSoTimeout(DISCOERY_TIMEOUT_MS);
@@ -68,7 +68,7 @@ public class Main {
 			DatagramPacket packet = new DatagramPacket(new byte[128], 0);
 			discoverSocket.receive(packet);
 			
-			String senderAddr = packet.getAddress() + ":" + packet.getPort();
+			String senderAddr = packet.getAddress().getHostAddress();
 			System.out.println("Discovered server at " + senderAddr);
 			
 			discoverSocket.close();
