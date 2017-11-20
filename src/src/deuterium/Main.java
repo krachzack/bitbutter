@@ -13,7 +13,7 @@ import java.util.Arrays;
 public class Main {
 
 	public static final InetSocketAddress DISCOVERY_MULTICAST_GROUP = new InetSocketAddress("239.255.10.200", 50160);
-	public static final int DISCOERY_TIMEOUT_MS = 500;
+	public static final int DISCOERY_TIMEOUT_MS = 1000;
 	
 	/**
 	 * If no arguments, start server and connect to local server.
@@ -91,7 +91,7 @@ public class Main {
 				
 				while(true) {
 					publishSock.send(new DatagramPacket(new byte[] { 42, 24 }, 2, DISCOVERY_MULTICAST_GROUP));
-					Thread.sleep(DISCOERY_TIMEOUT_MS / 2);
+					Thread.sleep(DISCOERY_TIMEOUT_MS / 4);
 				}
 				
 			} catch (IOException e) {
