@@ -12,10 +12,16 @@ public class Client implements Runnable {
 	public BlockingQueue<UniversalDTO> receivedFromServerQueue = new ArrayBlockingQueue<>(1024);
 	public BlockingQueue<UniversalDTO> willSendToServerQueue = new ArrayBlockingQueue<>(1024);
 	
+	private String serverAddr;
+	
+	public Client(String serverAddr) {
+		this.serverAddr = serverAddr;
+	}
+
 	@Override
 	public void run() {
 		try {
-			Socket sock = new Socket("localhost", Server.SERVER_ADDR.getPort());
+			Socket sock = new Socket(serverAddr, Server.SERVER_ADDR.getPort());
 			
 			while(true) {
 				ObjectInputStream inStream = new ObjectInputStream(sock.getInputStream());
