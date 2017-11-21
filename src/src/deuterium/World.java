@@ -41,8 +41,13 @@ public class World {
 	private static final int KIND_SIZE = 1;
 	private static final int ENTITY_SIZE = POSITION_SIZE + VELOCITY_SIZE + COLOR_SIZE + DIMENSION_SIZE + IN_USE_SIZE + REVERSED_SIZE + COLLISION_ENABLED_SIZE + KIND_SIZE;
 	
-	private static final int ENTITY_COUNT_MAX = 128;
-	private static final int PAST_FRAMES_MAX = 1000;
+	private static final int ENTITY_COUNT_MAX = 256;
+	private static final int PAST_FRAMES_MAX = 500;
+	// The world is four time the area of the window, that is a square with double sidelength
+	private static final float MAX_POSITION_X = Shell.WIDTH * 0.6f;
+	private static final float MIN_POSITION_X = -MAX_POSITION_X;
+	private static final float MAX_POSITION_Y = Shell.HEIGHT * 0.6f;
+	private static final float MIN_POSITION_Y = -MAX_POSITION_Y;
 	
 	public float[] entities = new float[ENTITY_SIZE * ENTITY_COUNT_MAX * PAST_FRAMES_MAX];
 	public int localPlayerID = -1;
@@ -54,6 +59,11 @@ public class World {
 		return new UniversalDTO(-1, "elohim", "update-full", Arrays.copyOfRange(entities, 0, ENTITY_SIZE * ENTITY_COUNT_MAX));
 	}
 	
+	/**
+	 * Called by the client with data from the server to work server updates into the world.
+	 * 
+	 * @param dto
+	 */
 	public void handleDTO(UniversalDTO dto) {
 		if(dto.getEvent().equals("update-full")) {
 			System.arraycopy(dto.getData(), 0, entities, 0, dto.getData().length);
@@ -187,6 +197,9 @@ public class World {
 			if(entities[offset + IN_USE] == 1.0f && entities[offset + REVERSED] == 0.0f) {
 				entities[offset + POSITION_X] += dt * entities[offset + VELOCITY_X];
 				entities[offset + POSITION_Y] += dt * entities[offset + VELOCITY_Y];
+				
+				entities[offset + POSITION_X] = Math.min(Math.max(entities[offset + POSITION_X], MIN_POSITION_X), MAX_POSITION_X);
+				entities[offset + POSITION_Y] = Math.min(Math.max(entities[offset + POSITION_Y], MIN_POSITION_Y), MAX_POSITION_Y);
 			}
 		}
 	}
