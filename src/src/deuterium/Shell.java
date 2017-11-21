@@ -64,7 +64,10 @@ public class Shell {
 				float vx = (float) (mouseX / Math.sqrt(mouseX*mouseX + mouseY*mouseY));
 				float vy = (float) (mouseY / Math.sqrt(mouseX*mouseX + mouseY*mouseY));
 				
-				toServer.put(new UniversalDTO(-1, "client", "request-steer", new float[] { vx, vy }));
+				if(Float.isFinite(vx)) {
+					// If the mouse is exactly above the player, ignore the steer request
+					toServer.put(new UniversalDTO(-1, "client", "request-steer", new float[] { vx, vy }));
+				}
 			} catch (InterruptedException e) {
 				e.printStackTrace();
 			}
