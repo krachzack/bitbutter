@@ -24,12 +24,18 @@ import java.util.WeakHashMap;
  */
 public class Server implements Runnable {
 	
+	private static final int PLAYER_VELOCITY_MAGNITUDE = 100;
+
+	private static final int PLAYER_PARTICLE_COUNT = 20;
+
 	public static final InetSocketAddress SERVER_ADDR = new InetSocketAddress("0.0.0.0", 40000);
 	
 	/**
 	 * Indicates how often the server should update world state and send it to clients.
 	 */
 	private static final float SERVER_UPDATE_INTERVAL = 0.03f;
+	
+	private static final float PARTICLE_SPAWN_INTERVAL = 0.03f;
 	
 	private volatile boolean run = true;
 	
@@ -39,13 +45,14 @@ public class Server implements Runnable {
 	 * Maps socket channels against the ID of the corresponding player in the world.
 	 * 
 	 * FIXME Memory leak: once the weak reference to the channel signals that the channel was freed,
-	 * the player ID should also be removed from the world
+	 * the player ID should also be removed from the world, not only the weak hashmap data
 	 */
 	private Map<SocketChannel, Integer> clientIdentities = new WeakHashMap<>();
 	private Map<SocketChannel, ByteBuffer> fromClientUpdateBufs = new WeakHashMap<>();
 	private Map<SocketChannel, int[]> clientParticles = new WeakHashMap<>();
 	private Map<SocketChannel, ByteBuffer> toClientUpdateBufs = new WeakHashMap<>();
 	private World world;
+	private float nextParticleSpawnWaitTime;
 	
 	public void terminate() {
 		run = false;
@@ -76,6 +83,16 @@ public class Server implements Runnable {
 				
 				broadcastWorldState();
 				
+//				long targetFrameTime = (long) (thisFrameTime + SERVER_UPDATE_INTERVAL * 1_000_000_000);
+//				long remainingFrameNanos = targetFrameTime - System.nanoTime();
+//				if(remainingFrameNanos > 0) {
+//					try {
+//						Thread.sleep(remainingFrameNanos / 1_000_000, (int) (remainingFrameNanos % 1_000_000));
+//					} catch (InterruptedException e) {
+//						e.printStackTrace();
+//					}
+//				}
+				
 				lastFrameTime = thisFrameTime;
 			}
 			
@@ -85,82 +102,6 @@ public class Server implements Runnable {
 		}
 		
 		System.out.println("Server terminating...");
-	}
-
-	private void broadcastWorldState() {
-		ByteBuffer state = world.getFullStateUpdateDTO().asBuffer();
-		broadcast(state);
-	}
-
-	private void executeMechanics(float dt) {
-		updateParticles();
-		
-		world.update(dt);
-	}
-
-	private void updateParticles() {
-		for(SocketChannel clientChannel: clientChannels) {
-			int clientID = clientIdentities.get(clientChannel);
-			int[] particleIDs = clientParticles.get(clientChannel);
-			
-			float clientPosX = world.get(clientID, World.POSITION_X);
-			float clientPosY = world.get(clientID, World.POSITION_Y);
-			
-			int anyParticleID = particleIDs[(int) (Math.random() * particleIDs.length)];
-			world.set(anyParticleID, World.POSITION_X, clientPosX);
-			world.set(anyParticleID, World.POSITION_Y, clientPosY);
-		}
-	}
-
-	private void handleNetworkData() throws IOException {
-		selector.select((long) (SERVER_UPDATE_INTERVAL * 1_000)); // Wait for IO event
-		
-		Iterator<SelectionKey> it = selector.selectedKeys().iterator();
-		while(it.hasNext()) {
-			SelectionKey key = it.next();
-			it.remove();
-			
-			if(!key.isValid()) {
-				continue;
-			}
-			
-			if(key.isAcceptable()) {
-				accept(key);
-			}
-			
-			if(key.isReadable()) {
-				read(key);
-			}
-			
-			if(key.isWritable()) {
-				write(key);
-			}
-		}
-	}
-
-	private void initWorld() {
-		world = new World();
-		int hole = world.addEntity();
-		
-		world.set(hole, World.DIMENSION_X, 20);
-		world.set(hole, World.DIMENSION_Y, 20);
-		world.set(hole, World.POSITION_X, 0);
-		world.set(hole, World.POSITION_Y, 0);
-		world.set(hole, World.VELOCITY_X, 5);
-		world.set(hole, World.VELOCITY_Y, 5);
-		world.set(hole, World.COLOR_R, 0.1f);
-		world.set(hole, World.COLOR_G, 0.1f);
-		world.set(hole, World.COLOR_B, 0.1f);
-		world.set(hole, World.COLLISION_ENABLED, 1.0f);
-		world.set(hole, World.KIND, World.KIND_VAL_TRAP);
-		
-		world.set(hole, World.DIMENSION_X, 20);
-		world.set(hole, World.DIMENSION_Y, 20);
-		world.set(hole, World.POSITION_X, 0.5f);
-		world.set(hole, World.POSITION_Y, 0.5f);
-		world.set(hole, World.COLOR_R, 1.0f);
-		world.set(hole, World.COLLISION_ENABLED, 0.0f);
-		world.set(hole, World.KIND, World.KIND_VAL_TRAP);
 	}
 
 	private void accept(SelectionKey key) throws IOException {
@@ -180,7 +121,7 @@ public class Server implements Runnable {
 		
 		clientIdentities.put(channel, playerID);
 		
-		int[] playerParticles = new int[50];
+		int[] playerParticles = new int[PLAYER_PARTICLE_COUNT];
 		for(int i = 0; i < playerParticles.length; ++i) {
 			playerParticles[i] = world.addEntity();
 			world.set(playerParticles[i], World.DIMENSION_X, 2.0f);
@@ -214,6 +155,7 @@ public class Server implements Runnable {
 			
 			while(readBuf.remaining() > 0) {
 				if(updateBuf == null) {
+					// FIXME this throws an exception if less than four bytes are available
 					int updateLen = readBuf.getInt();
 					updateBuf = ByteBuffer.allocate(updateLen);
 				} else {
@@ -238,28 +180,11 @@ public class Server implements Runnable {
 			fromClientUpdateBufs.put(channel, updateBuf);
 		}
 	}
-	
-	private void handleClientDTO(int clientID, UniversalDTO dto) {
-		if(dto.getEvent().equals("request-steer")) {
-			world.set(clientID, World.VELOCITY_X, dto.getData()[0] * 50);
-			world.set(clientID, World.VELOCITY_Y, dto.getData()[1] * 50);
-		}
-	}
-
-	private void broadcast(ByteBuffer buf) {
-		for(SocketChannel aClient : clientChannels) {
-			ByteBuffer updateBuf = toClientUpdateBufs.get(aClient);
-			
-			if(updateBuf == null) {
-				toClientUpdateBufs.put(aClient, buf.asReadOnlyBuffer());
-			}
-        }
-	}
 
 	private void write(SelectionKey key) {
 		SocketChannel channel = (SocketChannel) key.channel();
 		ByteBuffer pendingBuf = toClientUpdateBufs.get(channel);
-
+	
 		if(pendingBuf != null) {
 			try {
 				channel.write(pendingBuf);
@@ -270,6 +195,105 @@ public class Server implements Runnable {
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
+		}
+	}
+
+	private void handleNetworkData() throws IOException {
+		selector.select((long) (SERVER_UPDATE_INTERVAL * 1_000)); // Wait for IO event
+		
+		Iterator<SelectionKey> it = selector.selectedKeys().iterator();
+		while(it.hasNext()) {
+			SelectionKey key = it.next();
+			it.remove();
+			
+			if(!key.isValid()) {
+				continue;
+			}
+			
+			if(key.isAcceptable()) {
+				accept(key);
+			}
+			
+			if(key.isReadable()) {
+				read(key);
+			}
+			
+			if(key.isWritable()) {
+				write(key);
+			}
+		}
+	}
+
+	private void handleClientDTO(int clientID, UniversalDTO dto) {
+		if(dto.getEvent().equals("request-steer")) {
+			world.set(clientID, World.VELOCITY_X, dto.getData()[0] * PLAYER_VELOCITY_MAGNITUDE);
+			world.set(clientID, World.VELOCITY_Y, dto.getData()[1] * PLAYER_VELOCITY_MAGNITUDE);
+		}
+	}
+
+	private void broadcastWorldState() {
+		ByteBuffer state = world.getFullStateUpdateDTO().asBuffer();
+		broadcast(state);
+	}
+
+	private void broadcast(ByteBuffer buf) {
+		for(SocketChannel aClient : clientChannels) {
+			ByteBuffer updateBuf = toClientUpdateBufs.get(aClient);
+			
+			if(updateBuf == null) {
+				toClientUpdateBufs.put(aClient, buf.asReadOnlyBuffer());
+			}
+	    }
+	}
+
+	private void initWorld() {
+		world = new World();
+		int hole = world.addEntity();
+		
+		world.set(hole, World.DIMENSION_X, 20);
+		world.set(hole, World.DIMENSION_Y, 20);
+		world.set(hole, World.POSITION_X, 0);
+		world.set(hole, World.POSITION_Y, 0);
+		world.set(hole, World.VELOCITY_X, 5);
+		world.set(hole, World.VELOCITY_Y, 5);
+		world.set(hole, World.COLOR_R, 0.1f);
+		world.set(hole, World.COLOR_G, 0.1f);
+		world.set(hole, World.COLOR_B, 0.1f);
+		world.set(hole, World.COLLISION_ENABLED, 1.0f);
+		world.set(hole, World.KIND, World.KIND_VAL_TRAP);
+		
+		world.set(hole, World.DIMENSION_X, 20);
+		world.set(hole, World.DIMENSION_Y, 20);
+		world.set(hole, World.POSITION_X, 0.5f);
+		world.set(hole, World.POSITION_Y, 0.5f);
+		world.set(hole, World.COLOR_R, 1.0f);
+		world.set(hole, World.COLLISION_ENABLED, 0.0f);
+		world.set(hole, World.KIND, World.KIND_VAL_TRAP);
+	}
+
+	private void executeMechanics(float dt) {
+		updateParticles(dt);
+		
+		world.update(dt);
+	}
+
+	private void updateParticles(float dt) {
+		if(nextParticleSpawnWaitTime <= 0) {
+			nextParticleSpawnWaitTime += PARTICLE_SPAWN_INTERVAL;
+			
+			for(SocketChannel clientChannel: clientChannels) {
+				int clientID = clientIdentities.get(clientChannel);
+				int[] particleIDs = clientParticles.get(clientChannel);
+				
+				float clientPosX = world.get(clientID, World.POSITION_X);
+				float clientPosY = world.get(clientID, World.POSITION_Y);
+				
+				int anyParticleID = particleIDs[(int) (Math.random() * particleIDs.length)];
+				world.set(anyParticleID, World.POSITION_X, clientPosX);
+				world.set(anyParticleID, World.POSITION_Y, clientPosY);
+			}
+		} else {
+			nextParticleSpawnWaitTime -= dt;
 		}
 	}
 
