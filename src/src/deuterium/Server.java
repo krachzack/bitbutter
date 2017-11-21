@@ -112,22 +112,10 @@ public class Server implements Runnable {
 		System.out.println(clientChannels.size());
 		channel.register(selector, SelectionKey.OP_READ | SelectionKey.OP_WRITE);
 		
-		int playerID = world.addEntity();
-		world.set(playerID, World.DIMENSION_X, 10.0f);
-		world.set(playerID, World.DIMENSION_Y, 10.0f);
-		world.set(playerID, World.COLOR_R, (float) Math.random());
-		world.set(playerID, World.COLOR_G, (float) 0.2f);
-		world.set(playerID, World.COLOR_B, (float) Math.random());
-		
+		int playerID = createPlayer();
 		clientIdentities.put(channel, playerID);
 		
-		int[] playerParticles = new int[PLAYER_PARTICLE_COUNT];
-		for(int i = 0; i < playerParticles.length; ++i) {
-			playerParticles[i] = world.addEntity();
-			world.set(playerParticles[i], World.DIMENSION_X, 2.0f);
-			world.set(playerParticles[i], World.DIMENSION_Y, 2.0f);
-		}
-		
+		int[] playerParticles = createPlayerParticles();
 		clientParticles.put(channel, playerParticles);
 		
 		channel.write(new UniversalDTO(-1, "elohim", "join-acknowledge", new float[] { playerID }).asBuffer());
@@ -199,7 +187,8 @@ public class Server implements Runnable {
 	}
 
 	private void handleNetworkData() throws IOException {
-		selector.select((long) (SERVER_UPDATE_INTERVAL * 1_000)); // Wait for IO event
+		// Wait for IO event but never longer than the target frame interval
+		selector.select((long) (SERVER_UPDATE_INTERVAL * 1_000));
 		
 		Iterator<SelectionKey> it = selector.selectedKeys().iterator();
 		while(it.hasNext()) {
@@ -245,30 +234,62 @@ public class Server implements Runnable {
 			}
 	    }
 	}
-
+	
 	private void initWorld() {
 		world = new World();
-		int hole = world.addEntity();
 		
-		world.set(hole, World.DIMENSION_X, 20);
-		world.set(hole, World.DIMENSION_Y, 20);
-		world.set(hole, World.POSITION_X, 0);
-		world.set(hole, World.POSITION_Y, 0);
-		world.set(hole, World.VELOCITY_X, 5);
-		world.set(hole, World.VELOCITY_Y, 5);
-		world.set(hole, World.COLOR_R, 0.1f);
-		world.set(hole, World.COLOR_G, 0.1f);
-		world.set(hole, World.COLOR_B, 0.1f);
-		world.set(hole, World.COLLISION_ENABLED, 1.0f);
-		world.set(hole, World.KIND, World.KIND_VAL_TRAP);
+		initTraps();
+	}
+
+	private void initTraps() {
+		for(int i = 0; i < 30; ++i) {
+			int trap = world.addEntity();
+			
+			float radius = (float) (20.0 * Math.min(Math.random() + 0.2, 1.0));
+			float x = (float) ((Math.random() - 0.5) * Shell.WIDTH);
+			float y = Shell.HEIGHT/2 + radius;
+			float vx = (float) ((2.0 * Math.random() - 1.0) * 30);
+			float vy = (float) ((-Math.random() - 0.1) * 30);
+			
+			world.set(trap, World.DIMENSION_X, 2*radius);
+			world.set(trap, World.DIMENSION_Y, 2*radius);
+			world.set(trap, World.POSITION_X, x);
+			world.set(trap, World.POSITION_Y, y);
+			world.set(trap, World.VELOCITY_X, vx);
+			world.set(trap, World.VELOCITY_Y, vy);
+			world.set(trap, World.COLOR_R, 0.1f);
+			world.set(trap, World.COLOR_G, 0.1f);
+			world.set(trap, World.COLOR_B, 0.1f);
+			world.set(trap, World.POSITION_Y, y);
+			world.set(trap, World.KIND, World.KIND_VAL_TRAP);
+			world.set(trap, World.COLLISION_ENABLED, 1.0f);
+		}
+	}
+
+	private int createPlayer() {
+		int playerID = world.addEntity();
 		
-		world.set(hole, World.DIMENSION_X, 20);
-		world.set(hole, World.DIMENSION_Y, 20);
-		world.set(hole, World.POSITION_X, 0.5f);
-		world.set(hole, World.POSITION_Y, 0.5f);
-		world.set(hole, World.COLOR_R, 1.0f);
-		world.set(hole, World.COLLISION_ENABLED, 0.0f);
-		world.set(hole, World.KIND, World.KIND_VAL_TRAP);
+		world.set(playerID, World.DIMENSION_X, 10.0f);
+		world.set(playerID, World.DIMENSION_Y, 10.0f);
+		world.set(playerID, World.COLOR_R, (float) Math.random());
+		world.set(playerID, World.COLOR_G, (float) 0.2f);
+		world.set(playerID, World.COLOR_B, (float) Math.random());
+		world.set(playerID, World.KIND, World.KIND_VAL_PLAYER);
+		world.set(playerID, World.COLLISION_ENABLED, 1.0f);
+		
+		return playerID;
+	}
+
+	private int[] createPlayerParticles() {
+		int[] playerParticles = new int[PLAYER_PARTICLE_COUNT];
+		
+		for(int i = 0; i < playerParticles.length; ++i) {
+			playerParticles[i] = world.addEntity();
+			world.set(playerParticles[i], World.DIMENSION_X, 2.0f);
+			world.set(playerParticles[i], World.DIMENSION_Y, 2.0f);
+		}
+		
+		return playerParticles;
 	}
 
 	private void executeMechanics(float dt) {

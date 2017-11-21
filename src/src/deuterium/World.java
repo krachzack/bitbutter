@@ -43,10 +43,10 @@ public class World {
 	
 	private static final int ENTITY_COUNT_MAX = 256;
 	private static final int PAST_FRAMES_MAX = 500;
-	// The world is four time the area of the window, that is a square with double sidelength
-	private static final float MAX_POSITION_X = Shell.WIDTH * 0.6f;
+	// The world is four times the area of the window, that is a rectangle with double sidelengths
+	private static final float MAX_POSITION_X = Shell.WIDTH;
 	private static final float MIN_POSITION_X = -MAX_POSITION_X;
-	private static final float MAX_POSITION_Y = Shell.HEIGHT * 0.6f;
+	private static final float MAX_POSITION_Y = Shell.HEIGHT;
 	private static final float MIN_POSITION_Y = -MAX_POSITION_Y;
 	
 	public float[] entities = new float[ENTITY_SIZE * ENTITY_COUNT_MAX * PAST_FRAMES_MAX];
@@ -166,7 +166,14 @@ public class World {
 	}
 
 	private void respondToCollision(int ent1Offset, int ent2Offset) {
-		// This assumes ent1Offset is always lower than ent2Offset and that the player has the lowest possible ID
+		if(
+			entities[ent1Offset + KIND] == KIND_VAL_TRAP &&
+			entities[ent2Offset + KIND] == KIND_VAL_PLAYER
+		) {
+			// Reverse parameter order so player always comes first
+			respondToCollision(ent2Offset, ent1Offset);
+		}
+		
 		if(
 			entities[ent1Offset + KIND] == KIND_VAL_PLAYER &&
 			entities[ent2Offset + KIND] == KIND_VAL_TRAP
