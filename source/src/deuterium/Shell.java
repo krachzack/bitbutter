@@ -37,6 +37,9 @@ public class Shell {
 	private static Canvas canvas;
 	private static World world;
 	
+	private static final float SHOOT_COOLDOWN = 1.0f;
+	private static float remainingShootCooldown;
+	
 	public static void run(BlockingQueue<UniversalDTO> fromServer, BlockingQueue<UniversalDTO> toServer) {
 		initWindow();
 		world = new World();
@@ -61,12 +64,19 @@ public class Shell {
 			
 			locateMouse();
 			try {
-				float vx = (float) (mouseX / Math.sqrt(mouseX*mouseX + mouseY*mouseY));
-				float vy = (float) (mouseY / Math.sqrt(mouseX*mouseX + mouseY*mouseY));
+				remainingShootCooldown = Math.max(0, remainingShootCooldown-dt);
 				
-				if(Float.isFinite(vx)) {
+				float directionX = (float) (mouseX / Math.sqrt(mouseX*mouseX + mouseY*mouseY));
+				float directionY = (float) (mouseY / Math.sqrt(mouseX*mouseX + mouseY*mouseY));
+				
+				if(Float.isFinite(directionX)) {
 					// If the mouse is exactly above the player, ignore the steer request
-					toServer.put(new UniversalDTO(-1, "client", "request-steer", new float[] { vx, vy }));
+					toServer.put(new UniversalDTO(-1, "client", "request-steer", new float[] { directionX, directionY }));
+					
+					if(mousePressed && remainingShootCooldown == 0.0f) {
+						remainingShootCooldown = SHOOT_COOLDOWN;
+						toServer.put(new UniversalDTO(-1, "client", "request-shoot", new float[] { directionX, directionY }));
+					}
 				}
 			} catch (InterruptedException e) {
 				e.printStackTrace();

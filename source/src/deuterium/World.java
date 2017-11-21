@@ -30,6 +30,7 @@ public class World {
 	
 	public static final float KIND_VAL_PLAYER = 0.0f;
 	public static final float KIND_VAL_TRAP = 1.0f;
+	public static final float KIND_VAL_BULLET = 2.0f;
 	
 	private static final int POSITION_SIZE = 2;
 	private static final int VELOCITY_SIZE = 2;

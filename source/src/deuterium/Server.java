@@ -48,8 +48,8 @@ public class Server implements Runnable {
 	 * the player ID should also be removed from the world, not only the weak hashmap data
 	 */
 	private Map<SocketChannel, Integer> clientIdentities = new WeakHashMap<>();
-	private Map<SocketChannel, ByteBuffer> fromClientUpdateBufs = new WeakHashMap<>();
 	private Map<SocketChannel, int[]> clientParticles = new WeakHashMap<>();
+	private Map<SocketChannel, ByteBuffer> fromClientUpdateBufs = new WeakHashMap<>();
 	private Map<SocketChannel, ByteBuffer> toClientUpdateBufs = new WeakHashMap<>();
 	private World world;
 	private float nextParticleSpawnWaitTime;
@@ -214,9 +214,31 @@ public class Server implements Runnable {
 	}
 
 	private void handleClientDTO(int clientID, UniversalDTO dto) {
-		if(dto.getEvent().equals("request-steer")) {
+		String evt = dto.getEvent();
+		
+		if(evt.equals("request-steer")) {
 			world.set(clientID, World.VELOCITY_X, dto.getData()[0] * PLAYER_VELOCITY_MAGNITUDE);
 			world.set(clientID, World.VELOCITY_Y, dto.getData()[1] * PLAYER_VELOCITY_MAGNITUDE);
+		} else if(evt.equals("request-shoot")) {
+			float playerPosX = world.get(clientID, World.POSITION_X);
+			float playerPosY = world.get(clientID, World.POSITION_Y);
+			float playerVelX = world.get(clientID, World.VELOCITY_X);
+			float playerVelY = world.get(clientID, World.VELOCITY_Y);
+			
+			float bulletStartPosX = playerPosX;
+			float bulletStartPosY = playerPosY;
+			float bulletVelX = dto.getData()[0] * PLAYER_VELOCITY_MAGNITUDE * 2f;
+			float bulletVelY = dto.getData()[1] * PLAYER_VELOCITY_MAGNITUDE * 2f;
+			
+			int bullet = world.addEntity();
+			world.set(bullet, World.KIND, World.KIND_VAL_BULLET);
+			world.set(bullet, World.DIMENSION_X, 10.0f);
+			world.set(bullet, World.DIMENSION_Y, 10.0f);
+			world.set(bullet, World.POSITION_X, bulletStartPosX);
+			world.set(bullet, World.POSITION_Y, bulletStartPosY);
+			world.set(bullet, World.VELOCITY_X, bulletVelX);
+			world.set(bullet, World.VELOCITY_X, bulletVelY);
+			world.set(bullet, World.COLOR_R, 1.0f);
 		}
 	}
 
@@ -260,7 +282,6 @@ public class Server implements Runnable {
 			world.set(trap, World.COLOR_R, 0.1f);
 			world.set(trap, World.COLOR_G, 0.1f);
 			world.set(trap, World.COLOR_B, 0.1f);
-			world.set(trap, World.POSITION_Y, y);
 			world.set(trap, World.KIND, World.KIND_VAL_TRAP);
 			world.set(trap, World.COLLISION_ENABLED, 1.0f);
 		}
