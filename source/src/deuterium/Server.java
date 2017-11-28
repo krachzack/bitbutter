@@ -54,6 +54,7 @@ public class Server implements Runnable {
 	private Map<SocketChannel, ByteBuffer> toClientUpdateBufs = new WeakHashMap<>();
 	private World world;
 	private float nextParticleSpawnWaitTime;
+	private int nextPlayerTexId = 0;
 	
 	public void terminate() {
 		run = false;
@@ -283,9 +284,9 @@ public class Server implements Runnable {
 			world.set(trap, World.POSITION_Y, y);
 			world.set(trap, World.VELOCITY_X, vx);
 			world.set(trap, World.VELOCITY_Y, vy);
-			world.set(trap, World.COLOR_R, 0.1f);
-			world.set(trap, World.COLOR_G, 0.1f);
-			world.set(trap, World.COLOR_B, 0.1f);
+			world.set(trap, World.COLOR_R, 77.0f/255.0f);
+			world.set(trap, World.COLOR_G, 16.0f/255.0f);
+			world.set(trap, World.COLOR_B, 121.0f/255.0f);
 			world.set(trap, World.KIND, World.KIND_VAL_TRAP);
 			world.set(trap, World.COLLISION_ENABLED, 1.0f);
 		}
@@ -294,11 +295,12 @@ public class Server implements Runnable {
 	private int createPlayer() {
 		int playerID = world.addEntity();
 		
-		world.set(playerID, World.DIMENSION_X, 10.0f);
-		world.set(playerID, World.DIMENSION_Y, 10.0f);
-		world.set(playerID, World.COLOR_R, (float) Math.random());
-		world.set(playerID, World.COLOR_G, (float) 0.2f);
-		world.set(playerID, World.COLOR_B, (float) Math.random());
+		world.set(playerID, World.DIMENSION_X, 70.0f);
+		world.set(playerID, World.DIMENSION_Y, 70.0f);
+		world.set(playerID, World.COLOR_R, (float) 1.0f);
+		world.set(playerID, World.COLOR_G, (float) 1.0f);
+		world.set(playerID, World.COLOR_B, (float) 1.0f);
+		world.set(playerID, World.TEX_INDEX, (nextPlayerTexId++ % 2) + 1);
 		world.set(playerID, World.KIND, World.KIND_VAL_PLAYER);
 		world.set(playerID, World.COLLISION_ENABLED, 1.0f);
 		

@@ -158,7 +158,7 @@ public class Shell {
 		Graphics2D g = (Graphics2D) bufferStrategy.getDrawGraphics();
 		
 		// Draw the background first
-		g.setColor(new Color(0.8f, 0.8f, 0.8f));
+		g.setColor(new Color(18.0f/255.0f, 36.0f/255.0f, 64.0f/255.0f));
 		g.fillRect(0, 0, WIDTH, HEIGHT);
 		
 //		g.setColor(Color.DARK_GRAY);
@@ -166,6 +166,7 @@ public class Shell {
 //		g.drawLine(0, HEIGHT/2, WIDTH, HEIGHT/2);
 		
 		// Then let world render itself
+		g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
 		g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 		world.draw(dt, g);
 

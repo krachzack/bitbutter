@@ -2,9 +2,14 @@ package deuterium;
 import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.geom.AffineTransform;
+import java.awt.image.BufferedImage;
+import java.io.File;
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.FloatBuffer;
 import java.util.Arrays;
+
+import javax.imageio.ImageIO;
 
 public class World {
 	public static final int POSITION_X = 0;
@@ -28,6 +33,8 @@ public class World {
 	
 	public static final int KIND = 12;
 	
+	public static final int TEX_INDEX = 13;
+	
 	public static final float KIND_VAL_PLAYER = 0.0f;
 	public static final float KIND_VAL_TRAP = 1.0f;
 	public static final float KIND_VAL_BULLET = 2.0f;
@@ -40,7 +47,8 @@ public class World {
 	private static final int REVERSED_SIZE = 1;
 	private static final int COLLISION_ENABLED_SIZE = 1;
 	private static final int KIND_SIZE = 1;
-	private static final int ENTITY_SIZE = POSITION_SIZE + VELOCITY_SIZE + COLOR_SIZE + DIMENSION_SIZE + IN_USE_SIZE + REVERSED_SIZE + COLLISION_ENABLED_SIZE + KIND_SIZE;
+	private static final int TEX_INDEX_SIZE = 1;
+	private static final int ENTITY_SIZE = POSITION_SIZE + VELOCITY_SIZE + COLOR_SIZE + DIMENSION_SIZE + IN_USE_SIZE + REVERSED_SIZE + COLLISION_ENABLED_SIZE + KIND_SIZE + TEX_INDEX_SIZE;
 	
 	private static final int ENTITY_COUNT_MAX = 128;
 	private static final int PAST_FRAMES_MAX = 500;
@@ -49,6 +57,26 @@ public class World {
 	private static final float MIN_POSITION_X = -MAX_POSITION_X;
 	private static final float MAX_POSITION_Y = Shell.HEIGHT;
 	private static final float MIN_POSITION_Y = -MAX_POSITION_Y;
+	
+	private static final BufferedImage[] textures;
+	
+	static {
+		BufferedImage[] texturesToSave = null;
+		try {
+			texturesToSave = new BufferedImage[] {
+					null,
+					ImageIO.read(new File("planet_small.png")),
+					ImageIO.read(new File("moon_small.png"))
+			
+			};
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+		textures = texturesToSave;
+				
+	}
 	
 	public float[] entities = new float[ENTITY_SIZE * ENTITY_COUNT_MAX * PAST_FRAMES_MAX];
 	public int localPlayerID = -1;
@@ -232,8 +260,16 @@ public class World {
 				g.translate(entities[offset + POSITION_X], entities[offset + POSITION_Y]);
 				g.scale(entities[offset + DIMENSION_X] / 2, entities[offset + DIMENSION_Y] / 2);
 				
-				g.setColor(new Color(entities[offset + COLOR_R], entities[offset + COLOR_G], entities[offset + COLOR_B]));
-				g.fillOval(-1, -1, 2, 2);
+				
+				
+				int tex_idx = Math.round(entities[offset + TEX_INDEX]);
+				
+				if(tex_idx == 0) {
+					g.setColor(new Color(entities[offset + COLOR_R], entities[offset + COLOR_G], entities[offset + COLOR_B]));
+					g.fillOval(-1, -1, 2, 2);
+				} else {
+					g.drawImage(textures[tex_idx], -1, -1, 2, 2, null);
+				}
 				
 				g.setTransform(baseTrans);
 			}

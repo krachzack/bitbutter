@@ -45,7 +45,7 @@ public class Main {
 				// Give the server some time to initialize, so the connection won't be denied if the client thread starts before the server
 				// This should be properly synchronized instead of just waiting
 				try {
-					Thread.sleep(400);
+					Thread.sleep(1000);
 				} catch (InterruptedException e) {
 					e.printStackTrace();
 				}
