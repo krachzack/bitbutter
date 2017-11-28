@@ -277,8 +277,9 @@ public class Server implements Runnable {
 	private void initWorld() {
 		world = new World();
 		
-		initTraps();
 		initStars();
+		initTraps();
+		
 	}
 
 	private void initTraps() {

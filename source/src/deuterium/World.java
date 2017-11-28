@@ -206,6 +206,14 @@ public class World {
 		}
 		
 		if(
+				entities[ent1Offset + KIND] == KIND_VAL_STAR &&
+				entities[ent2Offset + KIND] == KIND_VAL_TRAP
+			) {
+				// Reverse parameter order so player always comes first
+				respondToCollision(ent2Offset, ent1Offset);
+			}
+		
+		if(
 			entities[ent1Offset + KIND] == KIND_VAL_PLAYER &&
 			entities[ent2Offset + KIND] == KIND_VAL_TRAP
 		) {
@@ -214,6 +222,16 @@ public class World {
 			
 			System.out.println((ent2Offset / ENTITY_SIZE) + " was deleted due to collision!");
 		}
+		
+		if(
+				entities[ent1Offset + KIND] == KIND_VAL_TRAP &&
+				entities[ent2Offset + KIND] == KIND_VAL_STAR
+			) {
+				// Delete the entity with higher ID, which is a trap
+				entities[ent2Offset + IN_USE] = 0.0f;
+				
+				System.out.println((ent2Offset / ENTITY_SIZE) + " was deleted due to collision!");
+			}
 		
 		if(
 				entities[ent1Offset + KIND] == KIND_VAL_PLAYER &&
