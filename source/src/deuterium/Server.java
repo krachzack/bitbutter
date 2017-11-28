@@ -115,11 +115,13 @@ public class Server implements Runnable {
 		System.out.println(clientChannels.size());
 		channel.register(selector, SelectionKey.OP_READ | SelectionKey.OP_WRITE);
 		
+		int[] playerParticles = createPlayerParticles();
+		clientParticles.put(channel, playerParticles);
+		
 		int playerID = createPlayer();
 		clientIdentities.put(channel, playerID);
 		
-		int[] playerParticles = createPlayerParticles();
-		clientParticles.put(channel, playerParticles);
+		
 		
 		channel.write(new UniversalDTO(-1, "elohim", "join-acknowledge", new float[] { playerID }).asBuffer());
 	}
@@ -291,7 +293,7 @@ public class Server implements Runnable {
 
 			
 			world.set(trap, World.DIMENSION_X, 80.0f);
-			world.set(trap, World.DIMENSION_Y, 70.0f);
+			world.set(trap, World.DIMENSION_Y, 75.0f);
 			world.set(trap, World.POSITION_X, x);
 			world.set(trap, World.POSITION_Y, y);
 			world.set(trap, World.VELOCITY_X, vx);
@@ -306,7 +308,7 @@ public class Server implements Runnable {
 	
 	private void initStars() {
 		for(int i = 0; i < 70; ++i) {
-			int trap = world.addEntity();
+			int star = world.addEntity();
 			
 			float radius = (float) (20.0 * Math.min(Math.random() + 0.2, 1.0));
 			float x = (float) ((Math.random() - 0.5) * Shell.WIDTH * 2);
@@ -314,17 +316,17 @@ public class Server implements Runnable {
 //			float vx = (float) ((2.0 * Math.random() - 1.0) * 30);
 //			float vy = (float) ((-Math.random() - 0.1) * 30);
 			
-			world.set(trap, World.DIMENSION_X, radius * 0.5f );
-			world.set(trap, World.DIMENSION_Y, radius * 0.5f );
-			world.set(trap, World.POSITION_X, x);
-			world.set(trap, World.POSITION_Y, y);
-//			world.set(trap, World.VELOCITY_X, vx);
-//			world.set(trap, World.VELOCITY_Y, vy);
-			world.set(trap, World.COLOR_R, 1.0f);
-			world.set(trap, World.COLOR_G, 1.0f);
-			world.set(trap, World.COLOR_B, 1.0f);
-			world.set(trap, World.KIND, World.KIND_VAL_STAR);
-			world.set(trap, World.COLLISION_ENABLED, 1.0f);
+			world.set(star, World.DIMENSION_X, radius * 0.5f );
+			world.set(star, World.DIMENSION_Y, radius * 0.5f );
+			world.set(star, World.POSITION_X, x);
+			world.set(star, World.POSITION_Y, y);
+//			world.set(star, World.VELOCITY_X, vx);
+//			world.set(star, World.VELOCITY_Y, vy);
+			world.set(star, World.COLOR_R, 1.0f);
+			world.set(star, World.COLOR_G, 1.0f);
+			world.set(star, World.COLOR_B, 1.0f);
+			world.set(star, World.KIND, World.KIND_VAL_STAR);
+			world.set(star, World.COLLISION_ENABLED, 1.0f);
 		}
 	}
 
@@ -350,6 +352,9 @@ public class Server implements Runnable {
 			playerParticles[i] = world.addEntity();
 			world.set(playerParticles[i], World.DIMENSION_X, 2.0f);
 			world.set(playerParticles[i], World.DIMENSION_Y, 2.0f);
+			world.set(playerParticles[i], World.COLOR_R, 1.0f);
+			world.set(playerParticles[i], World.COLOR_G, 1.0f);
+			world.set(playerParticles[i], World.COLOR_B, 1.0f);
 		}
 		
 		return playerParticles;

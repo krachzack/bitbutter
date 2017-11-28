@@ -60,6 +60,7 @@ public class World {
 	private static final float MIN_POSITION_Y = -MAX_POSITION_Y;
 	
 	private static final BufferedImage[] textures;
+	private static double angle = 0;
 	
 	static {
 		BufferedImage[] texturesToSave = null;
@@ -259,6 +260,9 @@ public class World {
 		g.translate(Shell.WIDTH / 2.0, Shell.HEIGHT / 2.0);
 		g.scale(1, -1);
 		
+		
+		System.out.println(dt);
+		
 		// Set up camera transform if there is a local player ID defined
 		if(localPlayerID != -1) {
 			g.translate(-get(localPlayerID, POSITION_X), -get(localPlayerID, POSITION_Y));
@@ -266,11 +270,17 @@ public class World {
 		
 		AffineTransform baseTrans = g.getTransform();
 		
+		angle += 0.012;
+		
 		for(int offset = 0; offset < (ENTITY_COUNT_MAX*ENTITY_SIZE); offset += ENTITY_SIZE) {
+			
 			if(entities[offset + IN_USE] == 1.0) {
+				if(entities[offset + KIND] == KIND_VAL_TRAP){
+					g.rotate(angle + offset, entities[offset + POSITION_X], entities[offset + POSITION_Y]);
+					g.fillOval((int)entities[offset + POSITION_X],(int) entities[offset + POSITION_Y], 1, 1);
+				}
 				g.translate(entities[offset + POSITION_X], entities[offset + POSITION_Y]);
 				g.scale(entities[offset + DIMENSION_X] / 2, entities[offset + DIMENSION_Y] / 2);
-				
 				
 				
 				int tex_idx = Math.round(entities[offset + TEX_INDEX]);
@@ -278,6 +288,11 @@ public class World {
 				if(tex_idx == 0) {
 					g.setColor(new Color(entities[offset + COLOR_R], entities[offset + COLOR_G], entities[offset + COLOR_B]));
 					g.fillOval(-1, -1, 2, 2);
+					if(entities[offset + KIND] == KIND_VAL_TRAP){
+						g.scale(40/entities[offset + DIMENSION_X] , 50/entities[offset + DIMENSION_Y]);
+						g.setColor(new Color(0, 0, 0));
+						g.fillOval(-1, -1, 2, 2);
+					}
 				} else {
 					g.drawImage(textures[tex_idx], -1, -1, 2, 2, null);
 				}
