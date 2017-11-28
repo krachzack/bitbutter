@@ -25,8 +25,9 @@ import java.util.WeakHashMap;
 public class Server implements Runnable {
 	
 	private static final int PLAYER_VELOCITY_MAGNITUDE = 100;
-
 	private static final int PLAYER_PARTICLE_COUNT = 20;
+	
+	private static final int BULLET_VELOCITY_MAGNITUDE = 3 * PLAYER_VELOCITY_MAGNITUDE;
 
 	public static final InetSocketAddress SERVER_ADDR = new InetSocketAddress("0.0.0.0", 40000);
 	
@@ -222,13 +223,14 @@ public class Server implements Runnable {
 		} else if(evt.equals("request-shoot")) {
 			float playerPosX = world.get(clientID, World.POSITION_X);
 			float playerPosY = world.get(clientID, World.POSITION_Y);
-			float playerVelX = world.get(clientID, World.VELOCITY_X);
-			float playerVelY = world.get(clientID, World.VELOCITY_Y);
+			float playerRed = world.get(clientID, World.COLOR_R);
+			float playerGreen = world.get(clientID, World.COLOR_G);
+			float playerBlue = world.get(clientID, World.COLOR_B);
 			
 			float bulletStartPosX = playerPosX;
 			float bulletStartPosY = playerPosY;
-			float bulletVelX = dto.getData()[0] * PLAYER_VELOCITY_MAGNITUDE * 2f;
-			float bulletVelY = dto.getData()[1] * PLAYER_VELOCITY_MAGNITUDE * 2f;
+			float bulletVelX = dto.getData()[0] * BULLET_VELOCITY_MAGNITUDE;
+			float bulletVelY = dto.getData()[1] * BULLET_VELOCITY_MAGNITUDE;
 			
 			int bullet = world.addEntity();
 			world.set(bullet, World.KIND, World.KIND_VAL_BULLET);
@@ -237,8 +239,10 @@ public class Server implements Runnable {
 			world.set(bullet, World.POSITION_X, bulletStartPosX);
 			world.set(bullet, World.POSITION_Y, bulletStartPosY);
 			world.set(bullet, World.VELOCITY_X, bulletVelX);
-			world.set(bullet, World.VELOCITY_X, bulletVelY);
-			world.set(bullet, World.COLOR_R, 1.0f);
+			world.set(bullet, World.VELOCITY_Y, bulletVelY);
+			world.set(bullet, World.COLOR_R, playerRed * 0.7f);
+			world.set(bullet, World.COLOR_G, playerGreen * 0.7f);
+			world.set(bullet, World.COLOR_B, playerBlue * 0.7f);
 		}
 	}
 
