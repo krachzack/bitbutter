@@ -51,6 +51,7 @@ public class Server implements Runnable {
 	private Map<SocketChannel, Integer> clientIdentities = new WeakHashMap<>();
 	private Map<SocketChannel, int[]> clientParticles = new WeakHashMap<>();
 	private Map<SocketChannel, ByteBuffer> fromClientUpdateBufs = new WeakHashMap<>();
+	private Map<SocketChannel, ByteBuffer> fromClientUpdateBufLens = new WeakHashMap<>();
 	private Map<SocketChannel, ByteBuffer> toClientUpdateBufs = new WeakHashMap<>();
 	private World world;
 	private float nextParticleSpawnWaitTime;
@@ -139,18 +140,27 @@ public class Server implements Runnable {
 			channel.close();
 			key.cancel();
 		} else {
-			ByteBuffer updateBuf = fromClientUpdateBufs.get(channel);
 			readBuf.flip();
+			ByteBuffer updateBuf = fromClientUpdateBufs.get(channel);
 			
 			while(readBuf.remaining() > 0) {
 				if(updateBuf == null) {
-					// FIXME this throws an exception if less than four bytes are available
-					int updateLen = readBuf.getInt();
-					updateBuf = ByteBuffer.allocate(updateLen);
+					ByteBuffer updateBufLenBuf = fromClientUpdateBufLens.get(channel);
+					if(updateBufLenBuf == null) {
+						updateBufLenBuf = ByteBuffer.allocate(4);
+						fromClientUpdateBufLens.put(channel, updateBufLenBuf);
+					}
+					
+					updateBufLenBuf.put(readBuf.get());
+					if(updateBufLenBuf.remaining() == 0) {
+						updateBufLenBuf.flip();
+						int len = updateBufLenBuf.getInt();
+						fromClientUpdateBufLens.remove(channel);
+						updateBuf = ByteBuffer.allocate(len);
+					}
 				} else {
-					if(updateBuf.remaining() > 0) {
-						updateBuf.put(readBuf.get());
-					} else {
+					updateBuf.put(readBuf.get());
+					if(updateBuf.remaining() == 0) {
 						UniversalDTO dto;
 						try {
 							int clientID = clientIdentities.get(channel);
