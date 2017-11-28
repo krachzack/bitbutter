@@ -38,6 +38,7 @@ public class World {
 	public static final float KIND_VAL_PLAYER = 0.0f;
 	public static final float KIND_VAL_TRAP = 1.0f;
 	public static final float KIND_VAL_BULLET = 2.0f;
+	public static final float KIND_VAL_STAR = 3.0f;
 	
 	private static final int POSITION_SIZE = 2;
 	private static final int VELOCITY_SIZE = 2;
@@ -196,7 +197,7 @@ public class World {
 
 	private void respondToCollision(int ent1Offset, int ent2Offset) {
 		if(
-			entities[ent1Offset + KIND] == KIND_VAL_TRAP &&
+			(entities[ent1Offset + KIND] == KIND_VAL_TRAP || entities[ent1Offset + KIND] == KIND_VAL_STAR) &&
 			entities[ent2Offset + KIND] == KIND_VAL_PLAYER
 		) {
 			// Reverse parameter order so player always comes first
@@ -212,6 +213,16 @@ public class World {
 			
 			System.out.println((ent2Offset / ENTITY_SIZE) + " was deleted due to collision!");
 		}
+		
+		if(
+				entities[ent1Offset + KIND] == KIND_VAL_PLAYER &&
+				entities[ent2Offset + KIND] == KIND_VAL_STAR
+			) {
+				// Delete the entity with higher ID, which is a trap
+				entities[ent2Offset + IN_USE] = 0.0f;
+				
+				System.out.println((ent2Offset / ENTITY_SIZE) + " was deleted due to collision!");
+			}
 	}
 
 	private void timeReverse(float dt) {
