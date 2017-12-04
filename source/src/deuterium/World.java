@@ -196,7 +196,7 @@ public class World {
 	private void timeReverse(float dt) {
 		final int LAST_FRAME_OFFSET = ENTITY_SIZE * ENTITY_COUNT_MAX;
 		
-		for(int offset = 0; offset < (ENTITY_COUNT_MAX*ENTITY_SIZE); offset += ENTITY_SIZE) {
+		for(int offset = 0; offset < LAST_FRAME_OFFSET; offset += ENTITY_SIZE) {
 			if(entities[offset + IN_USE] == 1.0f && entities[offset + REVERSED] > 0) {
 				float timeLeftToReverse = entities[offset + REVERSED];
 				
@@ -206,11 +206,11 @@ public class World {
 				} else {
 					// Restore state of last frame
 					for(int i = 0; i < (PAST_FRAMES_MAX-1); ++i) {
-						System.arraycopy(entities, offset + (i+1) * (ENTITY_COUNT_MAX*ENTITY_SIZE), entities, offset + i * (ENTITY_COUNT_MAX*ENTITY_SIZE), ENTITY_SIZE);
+						System.arraycopy(entities, offset + (i+1) * LAST_FRAME_OFFSET, entities, offset + i * LAST_FRAME_OFFSET, ENTITY_SIZE);
 					}
 					// Do it twice since we archived a frame before and the last frame is the same
 					for(int i = 0; i < (PAST_FRAMES_MAX-1); ++i) {
-						System.arraycopy(entities, offset + (i+1) * (ENTITY_COUNT_MAX*ENTITY_SIZE), entities, offset + i * (ENTITY_COUNT_MAX*ENTITY_SIZE), ENTITY_SIZE);
+						System.arraycopy(entities, offset + (i+1) * LAST_FRAME_OFFSET, entities, offset + i * LAST_FRAME_OFFSET, ENTITY_SIZE);
 					}
 					timeLeftToReverse -= Server.SERVER_UPDATE_INTERVAL;
 				}
