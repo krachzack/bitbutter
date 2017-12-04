@@ -44,6 +44,7 @@ public class Shell {
 		initWindow();
 		world = new World();
 		
+		initKeyboard();
 		initMouseClicks();
 		
 		System.out.println("running client shell");
@@ -92,6 +93,10 @@ public class Shell {
 			
 			lastFrameTime = thisFrameTime;
 		}
+	}
+
+	private static void initKeyboard() {
+		Toolkit.getDefaultToolkit().addAWTEventListener(new KeyboardLord(), AWTEvent.KEY_EVENT_MASK);
 	}
 
 	private static void initMouseClicks() {
@@ -157,7 +162,6 @@ public class Shell {
 		frame.setVisible(true);
 		
 		canvas.createBufferStrategy(2);
-		canvas.addKeyListener(new KeyboardLord());
 		bufferStrategy = canvas.getBufferStrategy();
 	}
 
