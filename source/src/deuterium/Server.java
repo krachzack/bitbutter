@@ -4,7 +4,10 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.net.InetSocketAddress;
+import java.net.Socket;
 import java.nio.ByteBuffer;
+import java.nio.channels.CancelledKeyException;
+import java.nio.channels.SelectableChannel;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
@@ -16,6 +19,7 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 import java.util.WeakHashMap;
+import java.util.concurrent.CancellationException;
 
 /**
  * 
@@ -204,13 +208,22 @@ public class Server implements Runnable {
 			if(key.isAcceptable()) {
 				accept(key);
 			}
-			
-			if(key.isReadable()) {
-				read(key);
-			}
-			
-			if(key.isWritable()) {
-				write(key);
+				
+			try {
+				if(key.isReadable()) {
+					read(key);
+				}
+				
+				if(key.isWritable()) {
+					write(key);
+				}
+			} catch (CancelledKeyException | IOException e) {
+				// When error occurs with communication, remove the player and associated data
+				e.printStackTrace();
+				killPlayer(key.channel());
+				clientChannels.remove(key.channel());
+				key.channel().close();
+				key.cancel();
 			}
 		}
 	}
@@ -304,6 +317,15 @@ public class Server implements Runnable {
 		world.set(playerID, World.COLLISION_ENABLED, 1.0f);
 		
 		return playerID;
+	}
+	
+	private void killPlayer(SelectableChannel channel) {
+		int id = clientIdentities.get(channel);
+		world.removeEntity(id);
+		
+		for(int particleId: clientParticles.get(channel)) {
+			world.removeEntity(particleId);
+		}
 	}
 
 	private int[] createPlayerParticles() {
