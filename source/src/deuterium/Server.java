@@ -81,21 +81,13 @@ public class Server implements Runnable {
 				
 				long thisFrameTime = System.nanoTime();
 				float dt = (thisFrameTime - lastFrameTime) / 1_000_000_000.0f;
-				executeMechanics(dt);
-				
-				broadcastWorldState();
-				
-//				long targetFrameTime = (long) (thisFrameTime + SERVER_UPDATE_INTERVAL * 1_000_000_000);
-//				long remainingFrameNanos = targetFrameTime - System.nanoTime();
-//				if(remainingFrameNanos > 0) {
-//					try {
-//						Thread.sleep(remainingFrameNanos / 1_000_000, (int) (remainingFrameNanos % 1_000_000));
-//					} catch (InterruptedException e) {
-//						e.printStackTrace();
-//					}
-//				}
-				
-				lastFrameTime = thisFrameTime;
+				if(dt > SERVER_UPDATE_INTERVAL) {
+					executeMechanics(dt);
+					
+					broadcastWorldState();
+					
+					lastFrameTime = thisFrameTime;
+				}
 			}
 			
 			
@@ -198,8 +190,7 @@ public class Server implements Runnable {
 	}
 
 	private void handleNetworkData() throws IOException {
-		// Wait for IO event but never longer than the target frame interval
-		selector.select((long) (SERVER_UPDATE_INTERVAL * 1_000));
+		selector.selectNow();
 		
 		Iterator<SelectionKey> it = selector.selectedKeys().iterator();
 		while(it.hasNext()) {
