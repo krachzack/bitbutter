@@ -4,7 +4,10 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.net.InetSocketAddress;
+import java.net.Socket;
 import java.nio.ByteBuffer;
+import java.nio.channels.CancelledKeyException;
+import java.nio.channels.SelectableChannel;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
@@ -16,6 +19,7 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 import java.util.WeakHashMap;
+import java.util.concurrent.CancellationException;
 
 /**
  * 
@@ -34,7 +38,7 @@ public class Server implements Runnable {
 	/**
 	 * Indicates how often the server should update world state and send it to clients.
 	 */
-	private static final float SERVER_UPDATE_INTERVAL = 0.03f;
+	public static final float SERVER_UPDATE_INTERVAL = 0.03f;
 	
 	private static final float PARTICLE_SPAWN_INTERVAL = 0.03f;
 	
@@ -82,21 +86,13 @@ public class Server implements Runnable {
 				
 				long thisFrameTime = System.nanoTime();
 				float dt = (thisFrameTime - lastFrameTime) / 1_000_000_000.0f;
-				executeMechanics(dt);
-				
-				broadcastWorldState();
-				
-//				long targetFrameTime = (long) (thisFrameTime + SERVER_UPDATE_INTERVAL * 1_000_000_000);
-//				long remainingFrameNanos = targetFrameTime - System.nanoTime();
-//				if(remainingFrameNanos > 0) {
-//					try {
-//						Thread.sleep(remainingFrameNanos / 1_000_000, (int) (remainingFrameNanos % 1_000_000));
-//					} catch (InterruptedException e) {
-//						e.printStackTrace();
-//					}
-//				}
-				
-				lastFrameTime = thisFrameTime;
+				if(dt > SERVER_UPDATE_INTERVAL) {
+					executeMechanics(dt);
+					
+					broadcastWorldState();
+					
+					lastFrameTime = thisFrameTime;
+				}
 			}
 			
 			
@@ -201,8 +197,7 @@ public class Server implements Runnable {
 	}
 
 	private void handleNetworkData() throws IOException {
-		// Wait for IO event but never longer than the target frame interval
-		selector.select((long) (SERVER_UPDATE_INTERVAL * 1_000));
+		selector.selectNow();
 		
 		Iterator<SelectionKey> it = selector.selectedKeys().iterator();
 		while(it.hasNext()) {
@@ -216,13 +211,22 @@ public class Server implements Runnable {
 			if(key.isAcceptable()) {
 				accept(key);
 			}
-			
-			if(key.isReadable()) {
-				read(key);
-			}
-			
-			if(key.isWritable()) {
-				write(key);
+				
+			try {
+				if(key.isReadable()) {
+					read(key);
+				}
+				
+				if(key.isWritable()) {
+					write(key);
+				}
+			} catch (CancelledKeyException | IOException e) {
+				// When error occurs with communication, remove the player and associated data
+				e.printStackTrace();
+				killPlayer(key.channel());
+				clientChannels.remove(key.channel());
+				key.channel().close();
+				key.cancel();
 			}
 		}
 	}
@@ -230,23 +234,34 @@ public class Server implements Runnable {
 	private void handleClientDTO(int clientID, UniversalDTO dto) {
 		String evt = dto.getEvent();
 		
+		// Freeze controls if time reversed
+		if(world.get(clientID, World.REVERSED) > 0) {
+			return;
+		}
+		
 		if(evt.equals("request-steer")) {
 			world.set(clientID, World.VELOCITY_X, dto.getData()[0] * PLAYER_VELOCITY_MAGNITUDE);
 			world.set(clientID, World.VELOCITY_Y, dto.getData()[1] * PLAYER_VELOCITY_MAGNITUDE);
 		} else if(evt.equals("request-shoot")) {
 			float playerPosX = world.get(clientID, World.POSITION_X);
 			float playerPosY = world.get(clientID, World.POSITION_Y);
+			float playerDimX = world.get(clientID, World.DIMENSION_X);
+			float playerDimY = world.get(clientID, World.DIMENSION_Y);
 			float playerRed = world.get(clientID, World.COLOR_R);
 			float playerGreen = world.get(clientID, World.COLOR_G);
 			float playerBlue = world.get(clientID, World.COLOR_B);
 			
-			float bulletStartPosX = playerPosX;
-			float bulletStartPosY = playerPosY;
-			float bulletVelX = dto.getData()[0] * BULLET_VELOCITY_MAGNITUDE;
-			float bulletVelY = dto.getData()[1] * BULLET_VELOCITY_MAGNITUDE;
+			float bulletDirX = dto.getData()[0];
+			float bulletDirY = dto.getData()[1];
+			// Offset the bullet a little so it cannot collide with the shooting player
+			float bulletStartPosX = playerPosX + bulletDirX * playerDimX;
+			float bulletStartPosY = playerPosY + bulletDirY * playerDimY;
+			float bulletVelX = bulletDirX * BULLET_VELOCITY_MAGNITUDE;
+			float bulletVelY = bulletDirY * BULLET_VELOCITY_MAGNITUDE;
 			
 			int bullet = world.addEntity();
 			world.set(bullet, World.KIND, World.KIND_VAL_BULLET);
+			world.set(bullet, World.COLLISION_ENABLED, 1.0f);
 			world.set(bullet, World.DIMENSION_X, 10.0f);
 			world.set(bullet, World.DIMENSION_Y, 10.0f);
 			world.set(bullet, World.POSITION_X, bulletStartPosX);
@@ -344,6 +359,15 @@ public class Server implements Runnable {
 		world.set(playerID, World.COLLISION_ENABLED, 1.0f);
 		
 		return playerID;
+	}
+	
+	private void killPlayer(SelectableChannel channel) {
+		int id = clientIdentities.get(channel);
+		world.removeEntity(id);
+		
+		for(int particleId: clientParticles.get(channel)) {
+			world.removeEntity(particleId);
+		}
 	}
 
 	private int[] createPlayerParticles() {

@@ -1,10 +1,12 @@
 package deuterium;
 
+import java.awt.AWTEvent;
+import java.awt.event.AWTEventListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.util.concurrent.locks.ReentrantLock;
 
-public class KeyboardLord implements KeyListener {
+public class KeyboardLord implements AWTEventListener {
 	private static final boolean[] WASD = new boolean[4];
 	private static final ReentrantLock lock = new ReentrantLock();
 
@@ -17,7 +19,6 @@ public class KeyboardLord implements KeyListener {
 		}
 	}
 	
-	@Override
 	public void keyPressed(KeyEvent e) {
 		lock.lock();
 		try {
@@ -37,7 +38,6 @@ public class KeyboardLord implements KeyListener {
 		}
 	}
 
-	@Override
 	public void keyReleased(KeyEvent e) {
 		lock.lock();
 		try {
@@ -58,5 +58,13 @@ public class KeyboardLord implements KeyListener {
 	}
 
 	@Override
-	public void keyTyped(KeyEvent e) {}
+	public void eventDispatched(AWTEvent event) {
+		KeyEvent evt = (KeyEvent) event;
+		if(evt.getID() == KeyEvent.KEY_PRESSED) {
+			keyPressed(evt);
+		} else if(evt.getID() == KeyEvent.KEY_RELEASED) {
+			keyReleased(evt);
+		}
+		evt.consume();
+	}
 }

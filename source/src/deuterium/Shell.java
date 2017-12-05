@@ -44,6 +44,7 @@ public class Shell {
 		initWindow();
 		world = new World();
 		
+		initKeyboard();
 		initMouseClicks();
 		
 		System.out.println("running client shell");
@@ -67,18 +68,21 @@ public class Shell {
 				remainingShootCooldown = Math.max(0, remainingShootCooldown-dt);
 				
 				boolean[] wasd = KeyboardLord.getWASD();
-				//float directionX = (float) (mouseX / Math.sqrt(mouseX*mouseX + mouseY*mouseY));
-				//float directionY = (float) (mouseY / Math.sqrt(mouseX*mouseX + mouseY*mouseY));
-				float directionX = ((wasd[3] ? 1f : 0f) - (wasd[1] ? 1f : 0f)) * (wasd[0] != wasd[2] ? 0.7f : 1f);
-				float directionY = ((wasd[0] ? 1f : 0f) - (wasd[2] ? 1f : 0f)) * (wasd[1] != wasd[3] ? 0.7f : 1f);
 				
-				if(Float.isFinite(directionX)) {
-					// If the mouse is exactly above the player, ignore the steer request
-					toServer.put(new UniversalDTO(-1, "client", "request-steer", new float[] { directionX, directionY }));
+				float keyboardDirectionX = ((wasd[3] ? 1f : 0f) - (wasd[1] ? 1f : 0f)) * (wasd[0] != wasd[2] ? 0.7f : 1f);
+				float keyboardDirectionY = ((wasd[0] ? 1f : 0f) - (wasd[2] ? 1f : 0f)) * (wasd[1] != wasd[3] ? 0.7f : 1f);
+				
+				// If the mouse is exactly above the player, ignore the steer request
+				toServer.put(new UniversalDTO(-1, "client", "request-steer", new float[] { keyboardDirectionX, keyboardDirectionY }));
+				
+				if(mousePressed && remainingShootCooldown == 0.0f) {
+					float mouseDirectionX = (float) (mouseX / Math.sqrt(mouseX*mouseX + mouseY*mouseY));
+					float mouseDirectionY = (float) (mouseY / Math.sqrt(mouseX*mouseX + mouseY*mouseY));
 					
-					if(mousePressed && remainingShootCooldown == 0.0f) {
+					// There will be infinities when the mouse is exactly above the player, ignore such cases
+					if(Float.isFinite(mouseDirectionX)) {
 						remainingShootCooldown = SHOOT_COOLDOWN;
-						toServer.put(new UniversalDTO(-1, "client", "request-shoot", new float[] { directionX, directionY }));
+						toServer.put(new UniversalDTO(-1, "client", "request-shoot", new float[] { mouseDirectionX, mouseDirectionY }));
 					}
 				}
 			} catch (InterruptedException e) {
@@ -89,6 +93,10 @@ public class Shell {
 			
 			lastFrameTime = thisFrameTime;
 		}
+	}
+
+	private static void initKeyboard() {
+		Toolkit.getDefaultToolkit().addAWTEventListener(new KeyboardLord(), AWTEvent.KEY_EVENT_MASK);
 	}
 
 	private static void initMouseClicks() {
@@ -154,7 +162,6 @@ public class Shell {
 		frame.setVisible(true);
 		
 		canvas.createBufferStrategy(2);
-		canvas.addKeyListener(new KeyboardLord());
 		bufferStrategy = canvas.getBufferStrategy();
 	}
 

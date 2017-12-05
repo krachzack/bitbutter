@@ -197,9 +197,7 @@ public class World {
 	}
 
 	private void respondToCollision(int ent1Offset, int ent2Offset) {
-		if(
-			(entities[ent1Offset + KIND] == KIND_VAL_TRAP || entities[ent1Offset + KIND] == KIND_VAL_STAR) &&
-			entities[ent2Offset + KIND] == KIND_VAL_PLAYER
+		if(entities[ent1Offset + KIND] != KIND_VAL_PLAYER && (entities[ent1Offset + KIND] == KIND_VAL_TRAP || entities[ent1Offset + KIND] == KIND_VAL_STAR) && entities[ent2Offset + KIND] == KIND_VAL_PLAYER
 		) {
 			// Reverse parameter order so player always comes first
 			respondToCollision(ent2Offset, ent1Offset);
@@ -221,6 +219,13 @@ public class World {
 			entities[ent2Offset + IN_USE] = 0.0f;
 			
 			System.out.println((ent2Offset / ENTITY_SIZE) + " was deleted due to collision!");
+		} else if(
+			entities[ent1Offset + KIND] == KIND_VAL_PLAYER &&
+			entities[ent2Offset + KIND] == KIND_VAL_BULLET
+		) {
+			// Reverse one and a half second
+			entities[ent1Offset + REVERSED] = 1.5f;
+			System.out.println("Reversing player with ID: " +  (ent1Offset / ENTITY_SIZE));
 		}
 		
 		if(
@@ -245,15 +250,28 @@ public class World {
 	}
 
 	private void timeReverse(float dt) {
-		for(int offset = 0; offset < (ENTITY_COUNT_MAX*ENTITY_SIZE); offset += ENTITY_SIZE) {
-			if(entities[offset + IN_USE] == 1.0f && entities[offset + REVERSED] == 1.0f) {
-				for(int i = 0; i < (PAST_FRAMES_MAX-1); ++i) {
-					System.arraycopy(entities, offset + (i+1) * (ENTITY_COUNT_MAX*ENTITY_SIZE), entities, offset + i * (ENTITY_COUNT_MAX*ENTITY_SIZE), ENTITY_SIZE);
+		final int LAST_FRAME_OFFSET = ENTITY_SIZE * ENTITY_COUNT_MAX;
+		
+		for(int offset = 0; offset < LAST_FRAME_OFFSET; offset += ENTITY_SIZE) {
+			if(entities[offset + IN_USE] == 1.0f && entities[offset + REVERSED] > 0) {
+				float timeLeftToReverse = entities[offset + REVERSED];
+				
+				if(entities[offset + LAST_FRAME_OFFSET + IN_USE] == 0.0f) {
+					// No more frames to reverse, object would not exist anymore, end rewinding early
+					timeLeftToReverse = 0;
+				} else {
+					// Restore state of last frame
+					for(int i = 0; i < (PAST_FRAMES_MAX-1); ++i) {
+						System.arraycopy(entities, offset + (i+1) * LAST_FRAME_OFFSET, entities, offset + i * LAST_FRAME_OFFSET, ENTITY_SIZE);
+					}
+					// Do it twice since we archived a frame before and the last frame is the same
+					for(int i = 0; i < (PAST_FRAMES_MAX-1); ++i) {
+						System.arraycopy(entities, offset + (i+1) * LAST_FRAME_OFFSET, entities, offset + i * LAST_FRAME_OFFSET, ENTITY_SIZE);
+					}
+					timeLeftToReverse -= Server.SERVER_UPDATE_INTERVAL;
 				}
-				// Do it twice since we archived a frame before
-				for(int i = 0; i < (PAST_FRAMES_MAX-1); ++i) {
-					System.arraycopy(entities, offset + (i+1) * (ENTITY_COUNT_MAX*ENTITY_SIZE), entities, offset + i * (ENTITY_COUNT_MAX*ENTITY_SIZE), ENTITY_SIZE);
-				}
+				
+				entities[offset + REVERSED] = Math.max(0.0f, timeLeftToReverse);
 			}
 		}
 	}
