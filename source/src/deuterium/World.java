@@ -141,6 +141,7 @@ public class World {
 	 * @param dt
 	 */
 	private void detectAndRespondToCollisions(float dt) {
+		// Inter-entity collisions
 		for(int ent1Offset = 0; ent1Offset < (ENTITY_COUNT_MAX*ENTITY_SIZE); ent1Offset += ENTITY_SIZE) {
 			if(entities[ent1Offset + IN_USE] == 1.0f && entities[ent1Offset + COLLISION_ENABLED] == 1.0f) {
 				for(int ent2Offset = ent1Offset + ENTITY_SIZE; ent2Offset < (ENTITY_COUNT_MAX*ENTITY_SIZE); ent2Offset += ENTITY_SIZE) {
@@ -161,6 +162,23 @@ public class World {
 							respondToCollision(ent1Offset, ent2Offset);
 						}
 					}
+				}
+			}
+		}
+		
+		// Edge colissions of traps
+		for(int entOffset = 0; entOffset < (ENTITY_COUNT_MAX*ENTITY_SIZE); entOffset += ENTITY_SIZE) {
+			if(entities[entOffset + IN_USE] == 1.0f && entities[entOffset + KIND] == KIND_VAL_TRAP) {
+				// Reflect off the edges
+				float posX = entities[entOffset + POSITION_X];
+				float posY = entities[entOffset + POSITION_Y];
+				
+				if(posX == MIN_POSITION_X || posX == MAX_POSITION_X) {
+					entities[entOffset + VELOCITY_X] = -entities[entOffset + VELOCITY_X];
+				}
+				
+				if(posY == MIN_POSITION_Y || posY == MAX_POSITION_Y) {
+					entities[entOffset + VELOCITY_Y] = -entities[entOffset + VELOCITY_Y];
 				}
 			}
 		}
