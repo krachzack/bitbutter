@@ -242,7 +242,15 @@ public class World {
 		
 		// Set up camera transform if there is a local player ID defined
 		if(localPlayerID != -1) {
-			g.translate(-get(localPlayerID, POSITION_X), -get(localPlayerID, POSITION_Y));
+			float camPosXMin = MIN_POSITION_X + (Shell.WIDTH - get(localPlayerID, DIMENSION_X)) / 2.0f;
+			float camPosXMax = MAX_POSITION_X - (Shell.WIDTH - get(localPlayerID, DIMENSION_X)) / 2.0f;
+			float camPosYMin = MIN_POSITION_Y + (Shell.HEIGHT - get(localPlayerID, DIMENSION_Y)) / 2.0f;
+			float camPosYMax = MAX_POSITION_Y - (Shell.HEIGHT - get(localPlayerID, DIMENSION_Y)) / 2.0f;
+					
+			float camPosX = Math.min(Math.max(get(localPlayerID, POSITION_X), camPosXMin), camPosXMax);
+			float camPosY = Math.min(Math.max(get(localPlayerID, POSITION_Y), camPosYMin), camPosYMax);
+			
+			g.translate(-camPosX, -camPosY);
 		}
 		
 		AffineTransform baseTrans = g.getTransform();
