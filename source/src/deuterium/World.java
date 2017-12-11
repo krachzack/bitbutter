@@ -171,6 +171,7 @@ public class World {
 	 * @param dt
 	 */
 	private void detectAndRespondToCollisions(float dt) {
+		// Inter-entity collisions
 		for(int ent1Offset = 0; ent1Offset < (ENTITY_COUNT_MAX*ENTITY_SIZE); ent1Offset += ENTITY_SIZE) {
 			if(entities[ent1Offset + IN_USE] == 1.0f && entities[ent1Offset + COLLISION_ENABLED] == 1.0f) {
 				for(int ent2Offset = ent1Offset + ENTITY_SIZE; ent2Offset < (ENTITY_COUNT_MAX*ENTITY_SIZE); ent2Offset += ENTITY_SIZE) {
@@ -191,6 +192,23 @@ public class World {
 							respondToCollision(ent1Offset, ent2Offset);
 						}
 					}
+				}
+			}
+		}
+		
+		// Edge colissions of traps
+		for(int entOffset = 0; entOffset < (ENTITY_COUNT_MAX*ENTITY_SIZE); entOffset += ENTITY_SIZE) {
+			if(entities[entOffset + IN_USE] == 1.0f && entities[entOffset + KIND] == KIND_VAL_TRAP) {
+				// Reflect off the edges
+				float posX = entities[entOffset + POSITION_X];
+				float posY = entities[entOffset + POSITION_Y];
+				
+				if(posX == MIN_POSITION_X || posX == MAX_POSITION_X) {
+					entities[entOffset + VELOCITY_X] = -entities[entOffset + VELOCITY_X];
+				}
+				
+				if(posY == MIN_POSITION_Y || posY == MAX_POSITION_Y) {
+					entities[entOffset + VELOCITY_Y] = -entities[entOffset + VELOCITY_Y];
 				}
 			}
 		}
@@ -301,7 +319,15 @@ public class World {
 		
 		// Set up camera transform if there is a local player ID defined
 		if(localPlayerID != -1) {
-			g.translate(-get(localPlayerID, POSITION_X), -get(localPlayerID, POSITION_Y));
+			float camPosXMin = MIN_POSITION_X + (Shell.WIDTH - get(localPlayerID, DIMENSION_X)) / 2.0f;
+			float camPosXMax = MAX_POSITION_X - (Shell.WIDTH - get(localPlayerID, DIMENSION_X)) / 2.0f;
+			float camPosYMin = MIN_POSITION_Y + (Shell.HEIGHT - get(localPlayerID, DIMENSION_Y)) / 2.0f;
+			float camPosYMax = MAX_POSITION_Y - (Shell.HEIGHT - get(localPlayerID, DIMENSION_Y)) / 2.0f;
+					
+			float camPosX = Math.min(Math.max(get(localPlayerID, POSITION_X), camPosXMin), camPosXMax);
+			float camPosY = Math.min(Math.max(get(localPlayerID, POSITION_Y), camPosYMin), camPosYMax);
+			
+			g.translate(-camPosX, -camPosY);
 		}
 		
 		AffineTransform baseTrans = g.getTransform();

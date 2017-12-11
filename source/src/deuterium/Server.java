@@ -253,17 +253,18 @@ public class Server implements Runnable {
 			
 			float bulletDirX = dto.getData()[0];
 			float bulletDirY = dto.getData()[1];
+			float bulletDiameter = 10.0f;
 			// Offset the bullet a little so it cannot collide with the shooting player
-			float bulletStartPosX = playerPosX + bulletDirX * playerDimX;
-			float bulletStartPosY = playerPosY + bulletDirY * playerDimY;
+			float bulletStartPosX = playerPosX + 0.5f * bulletDirX * (playerDimX + bulletDiameter);
+			float bulletStartPosY = playerPosY + 0.5f * bulletDirY * (playerDimY + bulletDiameter);
 			float bulletVelX = bulletDirX * BULLET_VELOCITY_MAGNITUDE;
 			float bulletVelY = bulletDirY * BULLET_VELOCITY_MAGNITUDE;
 			
 			int bullet = world.addEntity();
 			world.set(bullet, World.KIND, World.KIND_VAL_BULLET);
 			world.set(bullet, World.COLLISION_ENABLED, 1.0f);
-			world.set(bullet, World.DIMENSION_X, 10.0f);
-			world.set(bullet, World.DIMENSION_Y, 10.0f);
+			world.set(bullet, World.DIMENSION_X, bulletDiameter);
+			world.set(bullet, World.DIMENSION_Y, bulletDiameter);
 			world.set(bullet, World.POSITION_X, bulletStartPosX);
 			world.set(bullet, World.POSITION_Y, bulletStartPosY);
 			world.set(bullet, World.VELOCITY_X, bulletVelX);
