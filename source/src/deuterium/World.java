@@ -67,8 +67,9 @@ public class World {
 		try {
 			texturesToSave = new BufferedImage[] {
 					null,
-					ImageIO.read(new File("planet_small.png")),
-					ImageIO.read(new File("moon_small.png"))
+					ImageIO.read(new File("earth.png")),
+					ImageIO.read(new File("moon_small.png")),
+					ImageIO.read(new File("black_hole_soak.png"))
 			
 			};
 		} catch (IOException e) {
@@ -332,14 +333,13 @@ public class World {
 		
 		AffineTransform baseTrans = g.getTransform();
 		
-		angle += 0.012;
+		angle += 0.001;
 		
 		for(int offset = 0; offset < (ENTITY_COUNT_MAX*ENTITY_SIZE); offset += ENTITY_SIZE) {
 			
 			if(entities[offset + IN_USE] == 1.0) {
 				if(entities[offset + KIND] == KIND_VAL_TRAP){
 					g.rotate(angle + offset, entities[offset + POSITION_X], entities[offset + POSITION_Y]);
-					g.fillOval((int)entities[offset + POSITION_X],(int) entities[offset + POSITION_Y], 1, 1);
 				}
 				g.translate(entities[offset + POSITION_X], entities[offset + POSITION_Y]);
 				g.scale(entities[offset + DIMENSION_X] / 2, entities[offset + DIMENSION_Y] / 2);
@@ -350,13 +350,9 @@ public class World {
 				if(tex_idx == 0) {
 					g.setColor(new Color(entities[offset + COLOR_R], entities[offset + COLOR_G], entities[offset + COLOR_B]));
 					g.fillOval(-1, -1, 2, 2);
-					if(entities[offset + KIND] == KIND_VAL_TRAP){
-						g.scale(40/entities[offset + DIMENSION_X] , 50/entities[offset + DIMENSION_Y]);
-						g.setColor(new Color(0, 0, 0));
-						g.fillOval(-1, -1, 2, 2);
-					}
+					
 				} else {
-					g.drawImage(textures[tex_idx], -1, -1, 2, 2, null);
+					g.drawImage(textures[tex_idx], -1, 1, 2, -2, null);
 				}
 				
 				g.setTransform(baseTrans);
