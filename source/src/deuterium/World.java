@@ -60,7 +60,9 @@ public class World {
 	private static final float MIN_POSITION_Y = -MAX_POSITION_Y;
 	
 	private static final BufferedImage[] textures;
-	private static double angle = 0;
+	private static double angleOne = 0;
+	private static double angleTwo = 0;
+	private static double angleThree = 0;
 	
 	static {
 		BufferedImage[] texturesToSave = null;
@@ -69,7 +71,13 @@ public class World {
 					null,
 					ImageIO.read(new File("earth.png")),
 					ImageIO.read(new File("moon_small.png")),
-					ImageIO.read(new File("black_hole_soak.png"))
+
+					ImageIO.read(new File("black_hole_orbit_1.png")),
+					//ImageIO.read(new File("black_hole_soak.png")),
+					//ImageIO.read(new File("black_hole_gradient.png")),
+					ImageIO.read(new File("black_hole_orbit_2.png")),
+					ImageIO.read(new File("black_hole_orbit_3.png"))
+
 			
 			};
 		} catch (IOException e) {
@@ -316,8 +324,6 @@ public class World {
 		g.scale(1, -1);
 		
 		
-		System.out.println(dt);
-		
 		// Set up camera transform if there is a local player ID defined
 		if(localPlayerID != -1) {
 			float camPosXMin = MIN_POSITION_X + (Shell.WIDTH - get(localPlayerID, DIMENSION_X)) / 2.0f;
@@ -333,26 +339,72 @@ public class World {
 		
 		AffineTransform baseTrans = g.getTransform();
 		
-		angle += 0.001;
+
+		angleOne += 0.001;
+		angleTwo += 0.003;
+		angleThree += 0.005;
+
 		
 		for(int offset = 0; offset < (ENTITY_COUNT_MAX*ENTITY_SIZE); offset += ENTITY_SIZE) {
 			
 			if(entities[offset + IN_USE] == 1.0) {
 				if(entities[offset + KIND] == KIND_VAL_TRAP){
-					g.rotate(angle + offset, entities[offset + POSITION_X], entities[offset + POSITION_Y]);
+
+					g.rotate(angleOne + offset, entities[offset + POSITION_X], entities[offset + POSITION_Y]);
+					//g.fillOval((int)entities[offset + POSITION_X],(int) entities[offset + POSITION_Y], 1, 1);
+//					g.drawImage(textures[3], -1, 1, 2, -2, null);
+
 				}
 				g.translate(entities[offset + POSITION_X], entities[offset + POSITION_Y]);
 				g.scale(entities[offset + DIMENSION_X] / 2, entities[offset + DIMENSION_Y] / 2);
+				g.drawImage(textures[3], -1, 1, 2, -2, null);
+				
+				if(entities[offset + KIND] == KIND_VAL_TRAP){
+				//reverseTransform
+				g.scale(2/ entities[offset + DIMENSION_X] ,2 / entities[offset + DIMENSION_Y] );
+				g.translate(-entities[offset + POSITION_X], -entities[offset + POSITION_Y]);
+				g.rotate(-(angleOne + offset), entities[offset + POSITION_X], entities[offset + POSITION_Y]);
+				
+				//Transform again with other angle and so on...
+				g.rotate(- (angleTwo + offset), entities[offset + POSITION_X], entities[offset + POSITION_Y]);
+				g.translate(entities[offset + POSITION_X], entities[offset + POSITION_Y]);
+				g.scale(entities[offset + DIMENSION_X] / 2, entities[offset + DIMENSION_Y] / 2);
+				
+				g.drawImage(textures[4], -1, 1, 2, -2, null);
 				
 				
+				g.scale(2/ entities[offset + DIMENSION_X] ,2 / entities[offset + DIMENSION_Y] );
+				g.translate(-entities[offset + POSITION_X], -entities[offset + POSITION_Y]);
+				g.rotate(angleTwo + offset, entities[offset + POSITION_X], entities[offset + POSITION_Y]);
+				
+				
+				g.rotate(angleThree + offset, entities[offset + POSITION_X], entities[offset + POSITION_Y]);
+				g.translate(entities[offset + POSITION_X], entities[offset + POSITION_Y]);
+				g.scale(entities[offset + DIMENSION_X] / 2, entities[offset + DIMENSION_Y] / 2);
+				
+				g.drawImage(textures[5], -1, 1, 2, -2, null);
+				
+				g.scale(2/ entities[offset + DIMENSION_X] ,2 / entities[offset + DIMENSION_Y] );
+				g.translate(-entities[offset + POSITION_X], -entities[offset + POSITION_Y]);
+				g.rotate(-(angleThree + offset), entities[offset + POSITION_X], entities[offset + POSITION_Y]);
+				
+				
+				g.translate(entities[offset + POSITION_X], entities[offset + POSITION_Y]);
+				g.scale(entities[offset + DIMENSION_X] / 2, entities[offset + DIMENSION_Y] / 2);
+				}
 				int tex_idx = Math.round(entities[offset + TEX_INDEX]);
 				
 				if(tex_idx == 0) {
+					if(entities[offset + KIND] != KIND_VAL_TRAP) {
 					g.setColor(new Color(entities[offset + COLOR_R], entities[offset + COLOR_G], entities[offset + COLOR_B]));
 					g.fillOval(-1, -1, 2, 2);
-					
+
+					}
+
 				} else {
+					if(entities[offset + KIND] != KIND_VAL_TRAP) {
 					g.drawImage(textures[tex_idx], -1, 1, 2, -2, null);
+					}
 				}
 				
 				g.setTransform(baseTrans);
