@@ -308,15 +308,15 @@ public class Server implements Runnable {
 			float vy = (float) ((-Math.random() - 0.1) * 30);
 
 			
-			world.set(trap, World.DIMENSION_X, 80.0f);
-			world.set(trap, World.DIMENSION_Y, 75.0f);
+			world.set(trap, World.DIMENSION_X, 200.0f);
+			world.set(trap, World.DIMENSION_Y, 200.0f);
 			world.set(trap, World.POSITION_X, x);
 			world.set(trap, World.POSITION_Y, y);
 			world.set(trap, World.VELOCITY_X, vx);
 			world.set(trap, World.VELOCITY_Y, vy);
-			world.set(trap, World.COLOR_R, 77.0f/255.0f);
-			world.set(trap, World.COLOR_G, 16.0f/255.0f);
-			world.set(trap, World.COLOR_B, 121.0f/255.0f);
+//			world.set(trap, World.COLOR_R, 77.0f/255.0f);
+//			world.set(trap, World.COLOR_G, 16.0f/255.0f);
+//			world.set(trap, World.COLOR_B, 121.0f/255.0f);
 			world.set(trap, World.KIND, World.KIND_VAL_TRAP);
 			world.set(trap, World.COLLISION_ENABLED, 1.0f);
 		}

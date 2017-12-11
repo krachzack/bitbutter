@@ -155,6 +155,7 @@ public class Shell {
 		
 		JFrame frame = new JFrame();
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+		frame.setSize(WIDTH, HEIGHT);
 		frame.setIgnoreRepaint(true);
 		frame.setResizable(false);
 		frame.add(canvas);
