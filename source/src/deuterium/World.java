@@ -316,7 +316,6 @@ public class World {
 		g.scale(1, -1);
 		
 		
-		System.out.println(dt);
 		
 		// Set up camera transform if there is a local player ID defined
 		if(localPlayerID != -1) {
