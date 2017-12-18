@@ -301,7 +301,7 @@ public class Server implements Runnable {
 			float vy = (float) ((-Math.random() - 0.1) * 30);
 
 			
-			world.set(trap, World.DIMENSION_X, 200.0f);
+			world.set(trap, World.DIMENSION_X, 210.0f);
 			world.set(trap, World.DIMENSION_Y, 210.0f);
 			world.set(trap, World.POSITION_X, x);
 			world.set(trap, World.POSITION_Y, y);
