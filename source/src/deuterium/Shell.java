@@ -16,10 +16,13 @@ import javax.swing.JFrame;
 import javax.swing.SwingUtilities;
 
 public class Shell {
+	/** Mouse position in the window with 0 being the center of the window and 0.5*WIDTH being the right */
+	public static float mouseXScreen;
+	/** Mouse position in the window with 0 being the center of the window and 0.5*WIDTH being the top, -0.5*WIDTH being the botton */
+	public static float mouseYScreen;
 	
-	public static float mouseX;
-	public static float mouseY;
-	
+	private static float mouseXWorld;
+	private static float mouseYWorld;
 	public static boolean mousePressed;
 	public static boolean mouseReleased;
 	public static boolean rightMousePressed;
@@ -39,7 +42,6 @@ public class Shell {
 	
 	private static final float SHOOT_COOLDOWN = 1.0f;
 	private static float remainingShootCooldown;
-	
 	public static void run(BlockingQueue<UniversalDTO> fromServer, BlockingQueue<UniversalDTO> toServer) {
 		initWindow();
 		world = new World();
@@ -58,40 +60,57 @@ public class Shell {
 				System.err.println("Delta time was long: " + dt + "s");
 			}
 			
-			UniversalDTO nextDTO;
-			while((nextDTO = fromServer.poll()) != null) {
-				world.handleDTO(nextDTO);
-			}
+			receiveServerMessages(fromServer);
 			
-			locateMouse();
-			try {
-				remainingShootCooldown = Math.max(0, remainingShootCooldown-dt);
-				
-				boolean[] wasd = KeyboardLord.getWASD();
-				
-				float keyboardDirectionX = ((wasd[3] ? 1f : 0f) - (wasd[1] ? 1f : 0f)) * (wasd[0] != wasd[2] ? 0.7f : 1f);
-				float keyboardDirectionY = ((wasd[0] ? 1f : 0f) - (wasd[2] ? 1f : 0f)) * (wasd[1] != wasd[3] ? 0.7f : 1f);
-				
-				// If the mouse is exactly above the player, ignore the steer request
-				toServer.put(new UniversalDTO(-1, "client", "request-steer", new float[] { keyboardDirectionX, keyboardDirectionY }));
-				
-				if(mousePressed && remainingShootCooldown == 0.0f) {
-					float mouseDirectionX = (float) (mouseX / Math.sqrt(mouseX*mouseX + mouseY*mouseY));
-					float mouseDirectionY = (float) (mouseY / Math.sqrt(mouseX*mouseX + mouseY*mouseY));
-					
-					// There will be infinities when the mouse is exactly above the player, ignore such cases
-					if(Float.isFinite(mouseDirectionX)) {
-						remainingShootCooldown = SHOOT_COOLDOWN;
-						toServer.put(new UniversalDTO(-1, "client", "request-shoot", new float[] { mouseDirectionX, mouseDirectionY }));
-					}
-				}
-			} catch (InterruptedException e) {
-				e.printStackTrace();
-			}
+			sendInputMessagesToServer(toServer, dt);
 			
 			run(dt);
 			
 			lastFrameTime = thisFrameTime;
+		}
+	}
+
+	private static void sendInputMessagesToServer(BlockingQueue<UniversalDTO> toServer, float dt) {
+		if(world.localPlayerID == -1) {
+			// If server has not assigned a player ID yet, ignore controls
+			return;
+		}
+		
+		locateMouse();
+		try {
+			remainingShootCooldown = Math.max(0, remainingShootCooldown-dt);
+			
+			boolean[] wasd = KeyboardLord.getWASD();
+			
+			float keyboardDirectionX = ((wasd[3] ? 1f : 0f) - (wasd[1] ? 1f : 0f)) * (wasd[0] != wasd[2] ? 0.7f : 1f);
+			float keyboardDirectionY = ((wasd[0] ? 1f : 0f) - (wasd[2] ? 1f : 0f)) * (wasd[1] != wasd[3] ? 0.7f : 1f);
+			
+			// If the mouse is exactly above the player, ignore the steer request
+			toServer.put(new UniversalDTO(-1, "client", "request-steer", new float[] { keyboardDirectionX, keyboardDirectionY }));
+			
+			if(mousePressed && remainingShootCooldown == 0.0f) {
+				float mouseDirectionX = mouseXWorld - world.get(world.localPlayerID, World.POSITION_X);
+				float mouseDirectionY = mouseYWorld - world.get(world.localPlayerID, World.POSITION_Y);
+				
+				float mouseDirectionMagnitude = (float) Math.sqrt(mouseDirectionX*mouseDirectionX + mouseDirectionY*mouseDirectionY);
+				// When mouse is above player, magnitude is sqrt(0) = 0, ingore such cases
+				if(mouseDirectionMagnitude > 0) {
+					mouseDirectionX /= mouseDirectionMagnitude;
+					mouseDirectionY /= mouseDirectionMagnitude;
+					
+					remainingShootCooldown = SHOOT_COOLDOWN;
+					toServer.put(new UniversalDTO(-1, "client", "request-shoot", new float[] { mouseDirectionX, mouseDirectionY }));
+				}
+			}
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+	}
+
+	private static void receiveServerMessages(BlockingQueue<UniversalDTO> fromServer) {
+		UniversalDTO nextDTO;
+		while((nextDTO = fromServer.poll()) != null) {
+			world.handleDTO(nextDTO);
 		}
 	}
 
@@ -137,8 +156,11 @@ public class Shell {
 	private static void locateMouse() {
 		Point mousePos = MouseInfo.getPointerInfo().getLocation();
 		SwingUtilities.convertPointFromScreen(mousePos, canvas);
-		mouseX = mousePos.x - WIDTH / 2.0f;
-		mouseY = -(mousePos.y - HEIGHT / 2.0f);
+		mouseXScreen = mousePos.x - WIDTH / 2.0f;
+		mouseYScreen = -(mousePos.y - HEIGHT / 2.0f);
+		
+		mouseXWorld = mouseXScreen + world.getCameraPositionX();
+		mouseYWorld = mouseYScreen + world.getCameraPositionY();
 		
 		synchronized (Shell.class) {
 			mousePressed = mousePressedNextFrame;

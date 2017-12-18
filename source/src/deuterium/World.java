@@ -327,6 +327,38 @@ public class World {
 		}
 	}
 	
+	/**
+	 * Gets the X coordinate of the center point of the currently visible portion of the world.
+	 * @return
+	 */
+	public float getCameraPositionX() {
+		if(localPlayerID == -1) {
+			return 0.0f;
+		}
+		
+		float camPosXMin = MIN_POSITION_X + Shell.WIDTH / 2.0f;
+		float camPosXMax = MAX_POSITION_X - Shell.WIDTH / 2.0f;
+		float camPosX = Math.min(Math.max(get(localPlayerID, POSITION_X), camPosXMin), camPosXMax);
+		
+		return camPosX;
+	}
+	
+	/**
+	 * Gets the Y coordinate of the center point of the currently visible portion of the world.
+	 * @return
+	 */
+	public float getCameraPositionY() {
+		if(localPlayerID == -1) {
+			return 0.0f;
+		}
+		
+		float camPosYMin = MIN_POSITION_Y + Shell.HEIGHT / 2.0f;
+		float camPosYMax = MAX_POSITION_Y - Shell.HEIGHT / 2.0f;
+		float camPosY = Math.min(Math.max(get(localPlayerID, POSITION_Y), camPosYMin), camPosYMax);
+		
+		return camPosY;
+	}
+	
 	public void draw(float dt, Graphics2D g) {
 		AffineTransform oldTrans = g.getTransform();
 		Color oldColor = g.getColor();
@@ -336,19 +368,9 @@ public class World {
 		g.scale(1, -1);
 		
 		
-		
-		// Set up camera transform if there is a local player ID defined
-		if(localPlayerID != -1) {
-			float camPosXMin = MIN_POSITION_X + Shell.WIDTH / 2.0f;
-			float camPosXMax = MAX_POSITION_X - Shell.WIDTH / 2.0f;
-			float camPosYMin = MIN_POSITION_Y + Shell.HEIGHT / 2.0f;
-			float camPosYMax = MAX_POSITION_Y - Shell.HEIGHT / 2.0f;
-					
-			float camPosX = Math.min(Math.max(get(localPlayerID, POSITION_X), camPosXMin), camPosXMax);
-			float camPosY = Math.min(Math.max(get(localPlayerID, POSITION_Y), camPosYMin), camPosYMax);
-			
-			g.translate(-camPosX, -camPosY);
-		}
+		// Set up camera transform, is zero if no local player ID defined
+		g.translate(-getCameraPositionX(), -getCameraPositionY());
+
 		
 		AffineTransform baseTrans = g.getTransform();
 		
