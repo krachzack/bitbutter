@@ -527,9 +527,7 @@ public class World {
 				set(star, POSITION_Y, starPosY);
 				set(star, VELOCITY_X, starVx);
 				set(star, VELOCITY_Y, starVy);
-				set(star, COLOR_R, 1.0f);
-				set(star, COLOR_G, 1.0f);
-				set(star, COLOR_B, 1.0f);
+				generateStarColor(star);
 				set(star, KIND, KIND_VAL_STAR);
 				set(star, COLLISION_ENABLED, 1.0f);
 			}
