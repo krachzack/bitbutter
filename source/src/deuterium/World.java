@@ -304,8 +304,8 @@ public class World {
 
 	private void addStarsIfMissing() {
 		int starCount = 0;
-		for(int kindOffset = KIND; kindOffset < (ENTITY_COUNT_MAX*ENTITY_SIZE); kindOffset += ENTITY_SIZE) {
-			if(entities[kindOffset] == KIND_VAL_STAR) {
+		for(int entOffset = 0; entOffset < (ENTITY_COUNT_MAX*ENTITY_SIZE); entOffset += ENTITY_SIZE) {
+			if(entities[entOffset + IN_USE] == 1.0 && entities[entOffset + KIND] == KIND_VAL_STAR) {
 				++starCount;
 			}
 		}
