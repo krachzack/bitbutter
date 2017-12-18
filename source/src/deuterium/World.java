@@ -235,57 +235,68 @@ public class World {
 		}
 	}
 
-	private void respondToCollision(int ent1Offset, int ent2Offset) {
-		if(entities[ent1Offset + KIND] != KIND_VAL_PLAYER && (entities[ent1Offset + KIND] == KIND_VAL_TRAP || entities[ent1Offset + KIND] == KIND_VAL_STAR) && entities[ent2Offset + KIND] == KIND_VAL_PLAYER
-		) {
-			// Reverse parameter order so player always comes first
-			respondToCollision(ent2Offset, ent1Offset);
+	private void respondToCollision(int offset0, int offset1) {
+		float kind0 = entities[offset0 + KIND];
+		float kind1 = entities[offset1 + KIND];
+		
+		if(kind0 == KIND_VAL_BULLET || kind1 == KIND_VAL_BULLET) {
+			// Bullet-to-X colissions
+			respondToBulletColission(offset0, offset1);
+		} else if(kind0 == KIND_VAL_PLAYER || kind1 == KIND_VAL_PLAYER) {
+			// Player-to-X colission, except player-to-bullet which is handled before
+			respondToPlayerColission(offset0, offset1);
+		}
+	}
+
+	private void respondToBulletColission(int offset0, int offset1) {
+		float kind0 = entities[offset0 + KIND];
+		float kind1 = entities[offset1 + KIND];
+		
+		if(kind0 != KIND_VAL_BULLET && kind1 == KIND_VAL_BULLET) {
+			// Reverse parameter order if only the last parameter is a bullet
+			// this way, in bullet-to-X colissions, bullet will always come first
+			respondToBulletColission(offset1, offset0);
+			return;
 		}
 		
-		if(
-				entities[ent1Offset + KIND] == KIND_VAL_STAR &&
-				entities[ent2Offset + KIND] == KIND_VAL_TRAP
-			) {
-				// Reverse parameter order so player always comes first
-				respondToCollision(ent2Offset, ent1Offset);
+		// Bullet-to-X colissions
+		if(kind0 == KIND_VAL_BULLET) {
+			if(kind1 == KIND_VAL_BULLET) {
+				// bullet to bullet colission, delete both
+				entities[offset0 + IN_USE] = 0.0f;
+				entities[offset1 + IN_USE] = 0.0f;
+			} else if(kind1 == KIND_VAL_PLAYER) {
+				// bullet to player colission, reverse the players time arrow for 2 seconds
+				entities[offset1 + REVERSED] = 2.0f;
+			} else {
+				// Ignore colissions with stars and traps
+				// Maybe reverse traps too?
 			}
+		}
+	}
+	
+	private void respondToPlayerColission(int offset0, int offset1) {
+		float kind0 = entities[offset0 + KIND];
+		float kind1 = entities[offset1 + KIND];
 		
-		if(
-			entities[ent1Offset + KIND] == KIND_VAL_PLAYER &&
-			entities[ent2Offset + KIND] == KIND_VAL_TRAP
-		) {
-			// Delete the entity with higher ID, which is a trap
-			entities[ent2Offset + IN_USE] = 0.0f;
-			
-			System.out.println((ent2Offset / ENTITY_SIZE) + " was deleted due to collision!");
-		} else if(
-			entities[ent1Offset + KIND] == KIND_VAL_PLAYER &&
-			entities[ent2Offset + KIND] == KIND_VAL_BULLET
-		) {
-			// Reverse one and a half second
-			entities[ent1Offset + REVERSED] = 1.5f;
-			System.out.println("Reversing player with ID: " +  (ent1Offset / ENTITY_SIZE));
+		if(kind0 != KIND_VAL_PLAYER && kind1 == KIND_VAL_PLAYER) {
+			respondToPlayerColission(offset1, offset0);
+			return;
 		}
 		
-		if(
-				entities[ent1Offset + KIND] == KIND_VAL_TRAP &&
-				entities[ent2Offset + KIND] == KIND_VAL_STAR
-			) {
-				// Delete the entity with higher ID, which is a trap
-				entities[ent2Offset + IN_USE] = 0.0f;
-				
-				System.out.println((ent2Offset / ENTITY_SIZE) + " was deleted due to collision!");
+		// Player-to-X colissions
+		if(kind0 == KIND_VAL_PLAYER) {
+			if(kind1 == KIND_VAL_PLAYER) {
+				// When player crashes into other player, reverse the time a little bit for both
+				entities[offset0 + REVERSED] = 0.3f;
+				entities[offset1 + REVERSED] = 0.3f;
+			} else if(kind1 == KIND_VAL_STAR) {
+				// TODO add points
+				entities[offset1 + IN_USE] = 0.0f;
+			} else if(kind1 == KIND_VAL_TRAP) {
+				// TODO lose points
 			}
-		
-		if(
-				entities[ent1Offset + KIND] == KIND_VAL_PLAYER &&
-				entities[ent2Offset + KIND] == KIND_VAL_STAR
-			) {
-				// Delete the entity with higher ID, which is a trap
-				entities[ent2Offset + IN_USE] = 0.0f;
-				
-				System.out.println((ent2Offset / ENTITY_SIZE) + " was deleted due to collision!");
-			}
+		}
 	}
 
 	private void timeReverse(float dt) {
