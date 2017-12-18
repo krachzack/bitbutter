@@ -14,6 +14,7 @@ import java.util.Arrays;
 import javax.imageio.ImageIO;
 
 public class World {
+	private static final int DRAINED_STAR_SPEED = 110;
 	public static final int POSITION_X = 0;
 	public static final int POSITION_Y = 1;
 	
@@ -53,8 +54,21 @@ public class World {
 	private static final int TEX_INDEX_SIZE = 1;
 	private static final int ENTITY_SIZE = POSITION_SIZE + VELOCITY_SIZE + COLOR_SIZE + DIMENSION_SIZE + IN_USE_SIZE + REVERSED_SIZE + COLLISION_ENABLED_SIZE + KIND_SIZE + TEX_INDEX_SIZE;
 	
-	private static final int ENTITY_COUNT_MAX = 128;
+	private static final int ENTITY_COUNT_MAX = 256;
 	private static final int PAST_FRAMES_MAX = 500;
+	
+	/** Amount of stars at least in the game world, if drops below that, will spawn */
+	private static final int MINIMUM_STAR_COUNT = 60;
+	
+	/**
+	 * Indicates how often a player will lose points while inside a black hole.
+	 */
+	private static final float DRAIN_INTERVAL = 0.1f;
+	/**
+	 * Drain a star containing 10% of the players points every DRAIN_INTERVAL
+	 */
+	private static final float DRAIN_FACTOR = 0.1f;
+	
 	// The world is four times the area of the window, that is a rectangle with double sidelengths
 	private static final float MAX_POSITION_X = Shell.WIDTH;
 	private static final float MIN_POSITION_X = -MAX_POSITION_X;
@@ -90,6 +104,11 @@ public class World {
 	private String[] usernames = new String[0];
 	private int[] userIDs = new int[0];
 	private int[] scores = new int[0];
+	/**
+	 * Holds time in seconds of staying inside a black hole until the next lifepoint is drained,
+	 * not synced to the client world.
+	 */
+	private float[] drainTimeouts = new float[0];
 	
 	private int pastFrameCount = 0;
 	private boolean timeReverse;
@@ -165,18 +184,22 @@ public class World {
 		String[] newUsernames = new String[usernames.length + 1];
 		int[] newUserIds = new int[usernames.length + 1];
 		int[] newScores = new int[usernames.length + 1];
+		float[] newDrainTimeouts = new float[usernames.length + 1];
 		
 		newUsernames[0] = name;
 		newUserIds[0] = id;
 		newScores[0] = 0;
+		newDrainTimeouts[0] = DRAIN_INTERVAL;
 		
 		System.arraycopy(usernames, 0, newUsernames, 1, usernames.length);
 		System.arraycopy(userIDs, 0, newUserIds, 1, usernames.length);
 		System.arraycopy(scores, 0, newScores, 1, usernames.length);
+		System.arraycopy(drainTimeouts, 0, newDrainTimeouts, 1, drainTimeouts.length);
 		
 		usernames = newUsernames;
 		userIDs = newUserIds;
 		scores = newScores;
+		drainTimeouts = newDrainTimeouts;
 		
 		return id;
 	}
@@ -195,6 +218,7 @@ public class World {
 			String[] newUsernames = new String[usernames.length - 1];
 			int[] newUserIds = new int[usernames.length - 1];
 			int[] newScores = new int[usernames.length - 1];
+			float[] newDrainTimeouts = new float[usernames.length - 1];
 			
 			System.arraycopy(scores, 0, newScores, 0, idx);
 			System.arraycopy(scores, idx+1, newScores, idx, newScores.length - idx);
@@ -205,9 +229,13 @@ public class World {
 			System.arraycopy(usernames, 0, newUsernames, 0, idx);
 			System.arraycopy(usernames, idx+1, newUsernames, idx, newScores.length - idx);
 			
+			System.arraycopy(drainTimeouts, 0, newDrainTimeouts, 0, idx);
+			System.arraycopy(drainTimeouts, idx+1, newDrainTimeouts, idx, newScores.length - idx);
+			
 			scores = newScores;
 			userIDs = newUserIds;
 			usernames = newUsernames;
+			drainTimeouts = newDrainTimeouts;
 			
 			removeEntity(id);
 		} else {
@@ -266,11 +294,64 @@ public class World {
 			integratePosition(dt);
 			timeReverse(dt);
 			detectAndRespondToCollisions(dt);
+			addStarsIfMissing();
 			
 			// Archive the old frame
 			System.arraycopy(entities, 0, entities, ENTITY_COUNT_MAX*ENTITY_SIZE, entities.length - (ENTITY_COUNT_MAX*ENTITY_SIZE));
 			++pastFrameCount;
 		}
+	}
+
+	private void addStarsIfMissing() {
+		int starCount = 0;
+		for(int kindOffset = KIND; kindOffset < (ENTITY_COUNT_MAX*ENTITY_SIZE); kindOffset += ENTITY_SIZE) {
+			if(entities[kindOffset] == KIND_VAL_STAR) {
+				++starCount;
+			}
+		}
+		
+		for(; starCount < MINIMUM_STAR_COUNT; ++starCount) {
+			spawnStar();
+		}
+	}
+
+	private void spawnStar() {
+		int star = addEntity();
+		
+		float diameter = (float) (10.0 * Math.min(Math.random() + 0.2, 1.0));
+		float x = (float) ((Math.random() - 0.5) * Shell.WIDTH * 2);
+		float y = (float) ((Math.random() - 0.5) * Shell.HEIGHT * 2);
+		
+		set(star, World.DIMENSION_X, diameter);
+		set(star, World.DIMENSION_Y, diameter);
+		set(star, World.POSITION_X, x);
+		set(star, World.POSITION_Y, y);
+		set(star, World.VELOCITY_X, 0);
+		set(star, World.VELOCITY_Y, 0);
+		generateStarColor(star);
+		set(star, World.KIND, World.KIND_VAL_STAR);
+		set(star, World.COLLISION_ENABLED, 1.0f);
+	}
+
+	private void generateStarColor(int starId) {
+		float r = 1.0f;
+		float g = 1.0f;
+		float b = 1.0f;
+		
+		double rand = 2 * (Math.random() - 0.5);
+		if(rand > 0) {
+			// red-ish
+			g -= rand * 0.25;
+			b -= rand * 0.25;
+		} else {
+			// blue-ish
+			r += rand * 0.25;
+			g += rand * 0.25;
+		}
+		
+		set(starId, World.COLOR_R, r);
+		set(starId, World.COLOR_G, g);
+		set(starId, World.COLOR_B, b);
 	}
 
 	/**
@@ -312,7 +393,8 @@ public class World {
 			boolean inUse = entities[entOffset + IN_USE] == 1.0f;
 			boolean hasEdgeColissions = entities[entOffset + KIND] == KIND_VAL_TRAP ||
 					                    entities[entOffset + KIND] == KIND_VAL_PLAYER ||
-					                    entities[entOffset + KIND] == KIND_VAL_BULLET;
+					                    entities[entOffset + KIND] == KIND_VAL_BULLET ||
+					                    entities[entOffset + KIND] == KIND_VAL_STAR;
 			
 			if(inUse && hasEdgeColissions) {
 				// Reflect off the edges
@@ -376,7 +458,9 @@ public class World {
 				entities[offset0 + IN_USE] = 0.0f;
 				entities[offset1 + IN_USE] = 0.0f;
 			} else if(kind1 == KIND_VAL_PLAYER) {
-				// bullet to player colission, reverse the players time arrow for 2 seconds
+				// bullet to player colission, reverse the players time arrow for 2 seconds and also
+				// remove the bullet
+				entities[offset0 + IN_USE] = 0.0f;
 				entities[offset1 + REVERSED] = 2.0f;
 			} else {
 				// Ignore colissions with stars and traps
@@ -407,12 +491,52 @@ public class World {
 
 				scores[entityOffsetToScoreIdx(offset0)] += starArea;
 			} else if(kind1 == KIND_VAL_TRAP) {
-				// TODO lose points
+				drainPlayer(offset0, entityOffsetToScoreIdx(offset0));
 			}
 		}
 	}
 	
-	int entityOffsetToScoreIdx(int offset) {
+	private void drainPlayer(int entityOffset, int scoreIdx) {
+		drainTimeouts[scoreIdx] -= Server.SERVER_UPDATE_INTERVAL;
+		if(drainTimeouts[scoreIdx] <= 0) {
+			drainTimeouts[scoreIdx] = DRAIN_INTERVAL;
+			
+			// Drain 5% of points every DRAIN_INTERVAL seconds but at least one point
+			int starArea = (int) Math.max(1.0, (scores[scoreIdx] * DRAIN_FACTOR));
+			float starRadius = (float) Math.sqrt(starArea / Math.PI);
+			float starDim = 2 * starRadius;
+			scores[scoreIdx] = (int) Math.max(0.0, scores[scoreIdx] - starArea);
+			
+			if(starDim > 2) {
+				float starDirX = (float) (Math.random() - 0.5);
+				float starDirY = (float) (Math.random() - 0.5);
+				float starDirInvMagnitude = (float) (1.0 / Math.sqrt(starDirX*starDirX + starDirY*starDirY));
+				starDirX *= starDirInvMagnitude;
+				starDirY *= starDirInvMagnitude;
+				
+				float starVx = starDirX * DRAINED_STAR_SPEED;
+				float starVy = starDirY * DRAINED_STAR_SPEED;
+				
+				float starPosX = 10.0f + entities[entityOffset + POSITION_X] + starDirX * 0.5f * (entities[entityOffset + DIMENSION_X] + starDim);
+				float starPosY = 10.0f + entities[entityOffset + POSITION_Y] + starDirY * 0.5f * (entities[entityOffset + DIMENSION_Y] + starDim);
+				
+				int star = addEntity();
+				set(star, DIMENSION_X, starDim);
+				set(star, DIMENSION_Y, starDim);
+				set(star, POSITION_X, starPosX);
+				set(star, POSITION_Y, starPosY);
+				set(star, VELOCITY_X, starVx);
+				set(star, VELOCITY_Y, starVy);
+				set(star, COLOR_R, 1.0f);
+				set(star, COLOR_G, 1.0f);
+				set(star, COLOR_B, 1.0f);
+				set(star, KIND, KIND_VAL_STAR);
+				set(star, COLLISION_ENABLED, 1.0f);
+			}
+		}
+	}
+
+	private int entityOffsetToScoreIdx(int offset) {
 		int playerEntityId = offset / ENTITY_SIZE;
 		
 		for(int i = 0; i < userIDs.length; ++i) {
@@ -554,7 +678,7 @@ public class World {
 		// Pixels from the edge of the window top and right
 		final int HIGHSCORE_PADDING_TOP = 25;
 		final int HIGHSCORE_PADDING_RIGHT = 20;
-		final int HIGHSCORE_WIDTH = Shell.WIDTH / 6;
+		final int HIGHSCORE_WIDTH = Shell.WIDTH / 5;
 		final int HIGHSCORE_LEFT = Shell.WIDTH - HIGHSCORE_PADDING_RIGHT - HIGHSCORE_WIDTH;
 		final int HIGHSCORE_FONT_HEIGHT = 13; 
 		final int HIGHSCORE_LINE_HEIGHT = (int) (HIGHSCORE_FONT_HEIGHT * 1.7);

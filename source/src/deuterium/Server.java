@@ -28,7 +28,7 @@ import java.util.concurrent.CancellationException;
  */
 public class Server implements Runnable {
 	
-	private static final int PLAYER_VELOCITY_MAGNITUDE = 100;
+	public static final int PLAYER_VELOCITY_MAGNITUDE = 100;
 	private static final int PLAYER_PARTICLE_COUNT = 20;
 	
 	private static final int BULLET_VELOCITY_MAGNITUDE = 3 * PLAYER_VELOCITY_MAGNITUDE;
@@ -287,9 +287,7 @@ public class Server implements Runnable {
 	private void initWorld() {
 		world = new World();
 		
-		initStars();
 		initTraps();
-		
 	}
 
 	private void initTraps() {
@@ -315,30 +313,6 @@ public class Server implements Runnable {
 //			world.set(trap, World.COLOR_B, 121.0f/255.0f);
 			world.set(trap, World.KIND, World.KIND_VAL_TRAP);
 			world.set(trap, World.COLLISION_ENABLED, 1.0f);
-		}
-	}
-	
-	private void initStars() {
-		for(int i = 0; i < 70; ++i) {
-			int star = world.addEntity();
-			
-			float radius = (float) (20.0 * Math.min(Math.random() + 0.2, 1.0));
-			float x = (float) ((Math.random() - 0.5) * Shell.WIDTH * 2);
-			float y = (float) ((Math.random() - 0.5) * Shell.HEIGHT * 2);
-//			float vx = (float) ((2.0 * Math.random() - 1.0) * 30);
-//			float vy = (float) ((-Math.random() - 0.1) * 30);
-			
-			world.set(star, World.DIMENSION_X, radius * 0.5f );
-			world.set(star, World.DIMENSION_Y, radius * 0.5f );
-			world.set(star, World.POSITION_X, x);
-			world.set(star, World.POSITION_Y, y);
-//			world.set(star, World.VELOCITY_X, vx);
-//			world.set(star, World.VELOCITY_Y, vy);
-			world.set(star, World.COLOR_R, 1.0f);
-			world.set(star, World.COLOR_G, 1.0f);
-			world.set(star, World.COLOR_B, 1.0f);
-			world.set(star, World.KIND, World.KIND_VAL_STAR);
-			world.set(star, World.COLLISION_ENABLED, 1.0f);
 		}
 	}
 
