@@ -181,7 +181,7 @@ public class World {
 		return id;
 	}
 	
-	public int removePlayer(int id) {
+	public void removePlayer(int id) {
 		int idx = -1;
 		
 		for(int i = 0; i < userIDs.length; ++i) {
@@ -205,12 +205,14 @@ public class World {
 			System.arraycopy(usernames, 0, newUsernames, 0, idx);
 			System.arraycopy(usernames, idx+1, newUsernames, idx, newScores.length - idx);
 			
+			scores = newScores;
+			userIDs = newUserIds;
+			usernames = newUsernames;
+			
 			removeEntity(id);
 		} else {
 			throw new RuntimeException("Tried to remove player with id " + id + " but found no corresponding name and score");
 		}
-		
-		return idx;
 	}
 	
 	public void setTimeReverse(boolean timeReverse) {
@@ -399,12 +401,27 @@ public class World {
 				entities[offset0 + REVERSED] = 0.3f;
 				entities[offset1 + REVERSED] = 0.3f;
 			} else if(kind1 == KIND_VAL_STAR) {
-				// TODO add points
 				entities[offset1 + IN_USE] = 0.0f;
+				float starRadius = entities[offset1 + DIMENSION_X] / 2;
+				int starArea = (int) (starRadius * starRadius * Math.PI);
+
+				scores[entityOffsetToScoreIdx(offset0)] += starArea;
 			} else if(kind1 == KIND_VAL_TRAP) {
 				// TODO lose points
 			}
 		}
+	}
+	
+	int entityOffsetToScoreIdx(int offset) {
+		int playerEntityId = offset / ENTITY_SIZE;
+		
+		for(int i = 0; i < userIDs.length; ++i) {
+			if(playerEntityId == userIDs[i]) {
+				return i;
+			}
+		}
+		
+		return -1;
 	}
 
 	private void timeReverse(float dt) {
