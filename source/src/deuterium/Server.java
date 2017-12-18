@@ -46,12 +46,6 @@ public class Server implements Runnable {
 	
 	private Selector selector;
 	private Set<SocketChannel> clientChannels = new HashSet<>();
-	/**
-	 * Maps socket channels against the ID of the corresponding player in the world.
-	 * 
-	 * FIXME Memory leak: once the weak reference to the channel signals that the channel was freed,
-	 * the player ID should also be removed from the world, not only the weak hashmap data
-	 */
 	private Map<SocketChannel, Integer> clientIdentities = new WeakHashMap<>();
 	private Map<SocketChannel, int[]> clientParticles = new WeakHashMap<>();
 	private Map<SocketChannel, ByteBuffer> fromClientUpdateBufs = new WeakHashMap<>();
