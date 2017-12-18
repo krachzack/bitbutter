@@ -322,6 +322,13 @@ public class Server implements Runnable {
 	private int createPlayer() {
 		int playerID = world.addPlayer(NameGenerator.generateName());
 		
+		// By randomizing spawn position the chance for players spawning on top of each
+		// other are reduced. It can still happen though, and then they are in rewind forever
+		float posX = (float) ((Math.random() - 0.5) * (Shell.WIDTH - 70.0f));
+		float posY = (float) ((Math.random() - 0.5) * (Shell.HEIGHT - 70.0f));
+		
+		world.set(playerID, World.POSITION_X, posX);
+		world.set(playerID, World.POSITION_X, posY);
 		world.set(playerID, World.DIMENSION_X, 70.0f);
 		world.set(playerID, World.DIMENSION_Y, 70.0f);
 		world.set(playerID, World.COLOR_R, (float) 1.0f);
