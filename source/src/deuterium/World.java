@@ -306,9 +306,9 @@ public class World {
 	private void sortScores() {
 		// good ol' selection sort in bad but good enough for 5 elements O(n2)
 		for(int i = 0; i < scores.length; ++i) {
-			int maxIdx = i+1;
+			int maxIdx = i;
 			
-			for(int j = i+2; j < scores.length; ++j) {
+			for(int j = i+1; j < scores.length; ++j) {
 				if(scores[j] > scores[maxIdx]) {
 					maxIdx = j;
 				}
