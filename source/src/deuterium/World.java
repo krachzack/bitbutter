@@ -295,10 +295,44 @@ public class World {
 			timeReverse(dt);
 			detectAndRespondToCollisions(dt);
 			addStarsIfMissing();
+			sortScores();
 			
 			// Archive the old frame
 			System.arraycopy(entities, 0, entities, ENTITY_COUNT_MAX*ENTITY_SIZE, entities.length - (ENTITY_COUNT_MAX*ENTITY_SIZE));
 			++pastFrameCount;
+		}
+	}
+
+	private void sortScores() {
+		// good ol' selection sort in bad but good enough for 5 elements O(n2)
+		for(int i = 0; i < scores.length; ++i) {
+			int maxIdx = i+1;
+			
+			for(int j = i+2; j < scores.length; ++j) {
+				if(scores[j] > scores[maxIdx]) {
+					maxIdx = j;
+				}
+			}
+			
+			int swapI;
+			float swapF;
+			String swapS;
+			
+			swapS = usernames[i];
+			usernames[i] = usernames[maxIdx];
+			usernames[maxIdx] = swapS;
+			
+			swapI = scores[i];
+			scores[i] = scores[maxIdx];
+			scores[maxIdx] = swapI;
+			
+			swapI = userIDs[i];
+			userIDs[i] = userIDs[maxIdx];
+			userIDs[maxIdx] = swapI;
+			
+			swapF = drainTimeouts[i];
+			drainTimeouts[i] = drainTimeouts[maxIdx];
+			drainTimeouts[maxIdx] = swapF;
 		}
 	}
 
