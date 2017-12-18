@@ -343,7 +343,7 @@ public class Server implements Runnable {
 	}
 
 	private int createPlayer() {
-		int playerID = world.addEntity();
+		int playerID = world.addPlayer(NameGenerator.generateName());
 		
 		world.set(playerID, World.DIMENSION_X, 70.0f);
 		world.set(playerID, World.DIMENSION_Y, 70.0f);
@@ -359,7 +359,7 @@ public class Server implements Runnable {
 	
 	private void killPlayer(SelectableChannel channel) {
 		int id = clientIdentities.get(channel);
-		world.removeEntity(id);
+		world.removePlayer(id);
 		
 		for(int particleId: clientParticles.get(channel)) {
 			world.removeEntity(particleId);

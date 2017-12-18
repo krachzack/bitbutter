@@ -1,5 +1,7 @@
 package deuterium;
 import java.awt.Color;
+import java.awt.Font;
+import java.awt.FontMetrics;
 import java.awt.Graphics2D;
 import java.awt.geom.AffineTransform;
 import java.awt.image.BufferedImage;
@@ -84,11 +86,46 @@ public class World {
 	public float[] entities = new float[ENTITY_SIZE * ENTITY_COUNT_MAX * PAST_FRAMES_MAX];
 	public int localPlayerID = -1;
 	
+	/** Names of all logged in users, sorted by score descending */
+	private String[] usernames = new String[0];
+	private int[] userIDs = new int[0];
+	private int[] scores = new int[0];
+	
 	private int pastFrameCount = 0;
 	private boolean timeReverse;
 	
+	/**
+	 * Called from the server to serialize everything that a client could possible draw
+	 * 
+	 * @return a DTO to send to the client
+	 */
 	public UniversalDTO getFullStateUpdateDTO() {
-		return new UniversalDTO(-1, "elohim", "update-full", Arrays.copyOfRange(entities, 0, ENTITY_SIZE * ENTITY_COUNT_MAX));
+		
+		// Abusing username field to store a \0 separated list of all usernames
+		StringBuilder joinedUsernames = new StringBuilder();
+		if(usernames.length > 0) {
+			joinedUsernames.append(usernames[0]);
+			for(int i = 1; i < usernames.length; ++i) {
+				joinedUsernames.append("\0"); // Separate by triple pipes
+				joinedUsernames.append(usernames[i]);
+			}
+		}
+		
+		// The first few floats are the scores corresponding to the usernames
+		float[] data = new float[usernames.length + usernames.length + ENTITY_SIZE * ENTITY_COUNT_MAX];
+		for(int i = 0; i < scores.length; ++i) {
+			data[i] = scores[i];
+		}
+		
+		// Next few are the IDs corresponding to the user names
+		for(int i = 0; i < scores.length; ++i) {
+			data[scores.length + i] = userIDs[i];
+		}
+		
+		// Then comes the actual world data
+		System.arraycopy(entities, 0, data, scores.length + scores.length, ENTITY_SIZE * ENTITY_COUNT_MAX);
+		
+		return new UniversalDTO(-1, joinedUsernames.toString(), "update-full", data);
 	}
 	
 	/**
@@ -98,11 +135,82 @@ public class World {
 	 */
 	public void handleDTO(UniversalDTO dto) {
 		if(dto.getEvent().equals("update-full")) {
-			System.arraycopy(dto.getData(), 0, entities, 0, dto.getData().length);
+			float[] data = dto.getData();
+			
+			usernames = dto.getUsername().split("\0");
+			
+			// First few floats are the scores
+			scores = new int[usernames.length];
+			for(int i = 0; i < usernames.length; ++i) {
+				scores[i] = Math.round(data[i]);
+			}
+			
+			// Next few floats are the corresponding player entity IDs
+			userIDs = new int[usernames.length];
+			for(int i = 0; i < usernames.length; ++i) {
+				userIDs[i] = Math.round(data[usernames.length + i]);
+			}
+			
+			
+			System.arraycopy(data, scores.length+scores.length, entities, 0, ENTITY_SIZE * ENTITY_COUNT_MAX);
 		} else if(dto.getEvent().equals("join-acknowledge")) {
 			localPlayerID = (int) dto.getData()[0];
 			System.out.println("Server acknowledged this player joining and assigned UID: " + localPlayerID);
 		}
+	}
+
+	public int addPlayer(String name) {
+		int id = addEntity();
+		
+		String[] newUsernames = new String[usernames.length + 1];
+		int[] newUserIds = new int[usernames.length + 1];
+		int[] newScores = new int[usernames.length + 1];
+		
+		newUsernames[0] = name;
+		newUserIds[0] = id;
+		newScores[0] = 0;
+		
+		System.arraycopy(usernames, 0, newUsernames, 1, usernames.length);
+		System.arraycopy(userIDs, 0, newUserIds, 1, usernames.length);
+		System.arraycopy(scores, 0, newScores, 1, usernames.length);
+		
+		usernames = newUsernames;
+		userIDs = newUserIds;
+		scores = newScores;
+		
+		return id;
+	}
+	
+	public int removePlayer(int id) {
+		int idx = -1;
+		
+		for(int i = 0; i < userIDs.length; ++i) {
+			if(userIDs[i] == id) {
+				idx = i;
+				break;
+			}
+		}
+		
+		if(idx != -1) {
+			String[] newUsernames = new String[usernames.length - 1];
+			int[] newUserIds = new int[usernames.length - 1];
+			int[] newScores = new int[usernames.length - 1];
+			
+			System.arraycopy(scores, 0, newScores, 0, idx);
+			System.arraycopy(scores, idx+1, newScores, idx, newScores.length - idx);
+			
+			System.arraycopy(userIDs, 0, newUserIds, 0, idx);
+			System.arraycopy(userIDs, idx+1, newUserIds, idx, newScores.length - idx);
+			
+			System.arraycopy(usernames, 0, newUsernames, 0, idx);
+			System.arraycopy(usernames, idx+1, newUsernames, idx, newScores.length - idx);
+			
+			removeEntity(id);
+		} else {
+			throw new RuntimeException("Tried to remove player with id " + id + " but found no corresponding name and score");
+		}
+		
+		return idx;
 	}
 	
 	public void setTimeReverse(boolean timeReverse) {
@@ -374,6 +482,18 @@ public class World {
 		AffineTransform oldTrans = g.getTransform();
 		Color oldColor = g.getColor();
 		
+		renderEntitites(g);
+		
+		g.setColor(oldColor);
+		g.setTransform(oldTrans);
+		
+		renderHUD(g);
+		
+		g.setColor(oldColor);
+		g.setTransform(oldTrans);
+	}
+
+	private void renderEntitites(Graphics2D g) {
 		// Set transform so that we can draw in y-up normalized device coordinates
 		g.translate(Shell.WIDTH / 2.0, Shell.HEIGHT / 2.0);
 		g.scale(1, -1);
@@ -410,8 +530,39 @@ public class World {
 				g.setTransform(baseTrans);
 			}
 		}
+	}
+
+	private void renderHUD(Graphics2D g) {
+		final int MAX_VISIBLE_NAMES = 5;
+		// Pixels from the edge of the window top and right
+		final int HIGHSCORE_PADDING_TOP = 25;
+		final int HIGHSCORE_PADDING_RIGHT = 20;
+		final int HIGHSCORE_WIDTH = Shell.WIDTH / 6;
+		final int HIGHSCORE_LEFT = Shell.WIDTH - HIGHSCORE_PADDING_RIGHT - HIGHSCORE_WIDTH;
+		final int HIGHSCORE_FONT_HEIGHT = 13; 
+		final int HIGHSCORE_LINE_HEIGHT = (int) (HIGHSCORE_FONT_HEIGHT * 1.7);
 		
+		Font oldFont = g.getFont();
+		Color oldColor = g.getColor();
+		Font newFont = new Font(oldFont.getFontName(), Font.BOLD, HIGHSCORE_FONT_HEIGHT);
+		FontMetrics metrics = g.getFontMetrics(newFont);
+		
+		g.setFont(newFont);
+		g.setColor(Color.WHITE);
+		
+		for(int playerIdx = 0; playerIdx < usernames.length && playerIdx < MAX_VISIBLE_NAMES; ++playerIdx) {
+			// y position of the baseline
+			final int y = HIGHSCORE_PADDING_TOP + playerIdx * HIGHSCORE_LINE_HEIGHT + HIGHSCORE_FONT_HEIGHT;
+			
+			g.drawString(usernames[playerIdx].toUpperCase(), HIGHSCORE_LEFT, y);
+			
+			String scoreString = String.valueOf(scores[playerIdx]);
+			
+			final int scoreX = Shell.WIDTH - HIGHSCORE_PADDING_RIGHT - metrics.stringWidth(scoreString);
+			g.drawString(scoreString, scoreX, y);
+		}
+		
+		g.setFont(oldFont);
 		g.setColor(oldColor);
-		g.setTransform(oldTrans);
 	}
 }
