@@ -194,7 +194,7 @@ public class World {
 		System.arraycopy(usernames, 0, newUsernames, 1, usernames.length);
 		System.arraycopy(userIDs, 0, newUserIds, 1, usernames.length);
 		System.arraycopy(scores, 0, newScores, 1, usernames.length);
-		System.arraycopy(drainTimeouts, 0, newDrainTimeouts, 1, drainTimeouts.length);
+		System.arraycopy(drainTimeouts, 0, newDrainTimeouts, 1, usernames.length);
 		
 		usernames = newUsernames;
 		userIDs = newUserIds;

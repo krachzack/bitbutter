@@ -111,9 +111,12 @@ public class Server implements Runnable {
 		int playerID = createPlayer();
 		clientIdentities.put(channel, playerID);
 		
+		ByteBuffer joinAcknowledgeBuf = new UniversalDTO(-1, "elohim", "join-acknowledge", new float[] { playerID }).asBuffer();
+		channel.write(joinAcknowledgeBuf);
 		
-		
-		channel.write(new UniversalDTO(-1, "elohim", "join-acknowledge", new float[] { playerID }).asBuffer());
+		if(joinAcknowledgeBuf.remaining() > 0) {
+			toClientUpdateBufs.put(channel, joinAcknowledgeBuf);
+		}
 	}
 
 	private void read(SelectionKey key) throws IOException {
