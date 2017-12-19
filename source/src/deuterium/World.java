@@ -753,17 +753,23 @@ public class World {
 		final int HIGHSCORE_WIDTH = Shell.WIDTH / 5;
 		final int HIGHSCORE_LEFT = Shell.WIDTH - HIGHSCORE_PADDING_RIGHT - HIGHSCORE_WIDTH;
 		final int HIGHSCORE_FONT_HEIGHT = 13; 
+		final int HIGHSCORE_FONT_BOLD_HEIGHT = 15;
 		final int HIGHSCORE_LINE_HEIGHT = (int) (HIGHSCORE_FONT_HEIGHT * 1.7);
 		
 		Font oldFont = g.getFont();
 		Color oldColor = g.getColor();
-		Font newFont = new Font(oldFont.getFontName(), Font.BOLD, HIGHSCORE_FONT_HEIGHT);
+		Font newFont = new Font(oldFont.getFontName(), Font.PLAIN, HIGHSCORE_FONT_HEIGHT);
+		Font boldFont = new Font(oldFont.getFontName(), Font.BOLD, HIGHSCORE_FONT_BOLD_HEIGHT);
 		FontMetrics metrics = g.getFontMetrics(newFont);
 		
 		g.setFont(newFont);
 		g.setColor(Color.WHITE);
 		
 		for(int playerIdx = 0; playerIdx < usernames.length && playerIdx < MAX_VISIBLE_NAMES; ++playerIdx) {
+			if(userIDs[playerIdx] == localPlayerID) {
+				g.setFont(boldFont);
+			}
+			
 			// y position of the baseline
 			final int y = HIGHSCORE_PADDING_TOP + playerIdx * HIGHSCORE_LINE_HEIGHT + HIGHSCORE_FONT_HEIGHT;
 			
@@ -773,6 +779,10 @@ public class World {
 			
 			final int scoreX = Shell.WIDTH - HIGHSCORE_PADDING_RIGHT - metrics.stringWidth(scoreString);
 			g.drawString(scoreString, scoreX, y);
+			
+			if(userIDs[playerIdx] == localPlayerID) {
+				g.setFont(newFont);
+			}
 		}
 		
 		g.setFont(oldFont);
