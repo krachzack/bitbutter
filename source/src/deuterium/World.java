@@ -38,6 +38,8 @@ public class World {
 	
 	public static final int TEX_INDEX = 13;
 	
+	public static final int LIFETIME = 14;
+	
 	public static final float KIND_VAL_PLAYER = 0.0f;
 	public static final float KIND_VAL_TRAP = 1.0f;
 	public static final float KIND_VAL_BULLET = 2.0f;
@@ -52,9 +54,10 @@ public class World {
 	private static final int COLLISION_ENABLED_SIZE = 1;
 	private static final int KIND_SIZE = 1;
 	private static final int TEX_INDEX_SIZE = 1;
-	private static final int ENTITY_SIZE = POSITION_SIZE + VELOCITY_SIZE + COLOR_SIZE + DIMENSION_SIZE + IN_USE_SIZE + REVERSED_SIZE + COLLISION_ENABLED_SIZE + KIND_SIZE + TEX_INDEX_SIZE;
+	private static final int LIFETIME_SIZE = 1;
+	private static final int ENTITY_SIZE = POSITION_SIZE + VELOCITY_SIZE + COLOR_SIZE + DIMENSION_SIZE + IN_USE_SIZE + REVERSED_SIZE + COLLISION_ENABLED_SIZE + KIND_SIZE + TEX_INDEX_SIZE + LIFETIME_SIZE;
 	
-	private static final int ENTITY_COUNT_MAX = 256 + 240; // Because Paul wanted MORE particles
+	private static final int ENTITY_COUNT_MAX = 512; // Because Paul wanted MORE particles
 	private static final int PAST_FRAMES_MAX = 500;
 	
 	/** Amount of stars at least in the game world, if drops below that, will spawn */
@@ -68,6 +71,7 @@ public class World {
 	 * Drain a star containing 10% of the players points every DRAIN_INTERVAL
 	 */
 	private static final float DRAIN_FACTOR = 0.1f;
+	private static final float DRAIN_STAR_LIFETIME = 2.0f;
 	
 	// The world is four times the area of the window, that is a rectangle with double sidelengths
 	private static final float MAX_POSITION_X = Shell.WIDTH;
@@ -296,10 +300,24 @@ public class World {
 			detectAndRespondToCollisions(dt);
 			addStarsIfMissing();
 			sortScores();
+			handleLifetimes(dt);
 			
 			// Archive the old frame
 			System.arraycopy(entities, 0, entities, ENTITY_COUNT_MAX*ENTITY_SIZE, entities.length - (ENTITY_COUNT_MAX*ENTITY_SIZE));
 			++pastFrameCount;
+		}
+	}
+
+	private void handleLifetimes(float dt) {
+		for(int entOffset = 0; entOffset < (ENTITY_COUNT_MAX*ENTITY_SIZE); entOffset += ENTITY_SIZE) {
+			if(entities[entOffset + IN_USE] == 1.0 && entities[entOffset + LIFETIME] > 0) {
+				System.out.println("Lifetime: " + entities[entOffset + LIFETIME]);
+				entities[entOffset + LIFETIME] -= dt;
+				if(entities[entOffset + LIFETIME] <= 0.0f) {
+					entities[entOffset + IN_USE] = 0.0f;
+					entities[entOffset + LIFETIME] = 0.0f;
+				}
+			}
 		}
 	}
 
@@ -564,6 +582,7 @@ public class World {
 				generateStarColor(star);
 				set(star, KIND, KIND_VAL_STAR);
 				set(star, COLLISION_ENABLED, 1.0f);
+				set(star, LIFETIME, 2.0f);
 			}
 		}
 	}

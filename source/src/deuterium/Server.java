@@ -246,9 +246,6 @@ public class Server implements Runnable {
 			float playerPosY = world.get(clientID, World.POSITION_Y);
 			float playerDimX = world.get(clientID, World.DIMENSION_X);
 			float playerDimY = world.get(clientID, World.DIMENSION_Y);
-			float playerRed = world.get(clientID, World.COLOR_R);
-			float playerGreen = world.get(clientID, World.COLOR_G);
-			float playerBlue = world.get(clientID, World.COLOR_B);
 
 			float bulletDirX = dto.getData()[0];
 			float bulletDirY = dto.getData()[1];
@@ -268,6 +265,7 @@ public class Server implements Runnable {
 			world.set(bullet, World.POSITION_Y, bulletStartPosY);
 			world.set(bullet, World.VELOCITY_X, bulletVelX);
 			world.set(bullet, World.VELOCITY_Y, bulletVelY);
+			world.set(bullet, World.LIFETIME, 1.5f);
 			world.set(bullet, World.COLOR_R, 178.0f/255.0f);
 			world.set(bullet, World.COLOR_G, 123.0f/255.0f);
 			world.set(bullet, World.COLOR_B, 13.0f/255.0f);
