@@ -698,6 +698,10 @@ public class World {
 					
 				} else {
 					g.drawImage(textures[tex_idx], -1, 1, 2, -2, null);
+					if(entities[offset + REVERSED] > 0) {
+						g.setColor(new Color(1.0f, 0.0f, 0.0f, 0.5f));
+						g.fillOval(-1, -1, 2, 2);
+					}
 				}
 				
 				g.setTransform(baseTrans);
