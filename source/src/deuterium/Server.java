@@ -268,9 +268,9 @@ public class Server implements Runnable {
 			world.set(bullet, World.POSITION_Y, bulletStartPosY);
 			world.set(bullet, World.VELOCITY_X, bulletVelX);
 			world.set(bullet, World.VELOCITY_Y, bulletVelY);
-			world.set(bullet, World.COLOR_R, playerRed * 0.7f);
-			world.set(bullet, World.COLOR_G, playerGreen * 0.7f);
-			world.set(bullet, World.COLOR_B, playerBlue * 0.7f);
+			world.set(bullet, World.COLOR_R, 178.0f/255.0f);
+			world.set(bullet, World.COLOR_G, 123.0f/255.0f);
+			world.set(bullet, World.COLOR_B, 13.0f/255.0f);
 		}
 	}
 
