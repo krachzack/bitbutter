@@ -294,18 +294,23 @@ public class Server implements Runnable {
 	}
 
 	private void initTraps() {
-		for(int i = 0; i < 5; ++i) {
+		for(int i = 0; i < 10; ++i) {
 			int trap = world.addEntity();
 
 			float radius = (float) (20.0 * Math.min(Math.random() + 0.2, 1.0));
 			float x = (float) ((Math.random() - 0.5) * Shell.WIDTH);
 			float y = (float) ((Math.random() - 0.5) * Shell.HEIGHT);
-			float vx = (float) ((2.0 * Math.random() - 1.0) * 30);
-			float vy = (float) ((-Math.random() - 0.1) * 30);
+			
+			float vx = (float) (Math.random() - 0.5);
+			float vy = (float) (Math.random() - 0.5);
+			vx /= Math.sqrt(vx*vx + vy*vy);
+			vy /= Math.sqrt(vx*vx + vy*vy);
+			vx *= 200;
+			vy *= 200;
 
 
-			world.set(trap, World.DIMENSION_X, 210.0f);
-			world.set(trap, World.DIMENSION_Y, 210.0f);
+			world.set(trap, World.DIMENSION_X, 150.0f);
+			world.set(trap, World.DIMENSION_Y, 150.0f);
 			world.set(trap, World.POSITION_X, x);
 			world.set(trap, World.POSITION_Y, y);
 			world.set(trap, World.VELOCITY_X, vx);

@@ -697,7 +697,7 @@ public class World {
 		
 		AffineTransform baseTrans = g.getTransform();
 		
-		angle += 0.001;
+		angle += 0.005;
 		
 		for(int offset = 0; offset < (ENTITY_COUNT_MAX*ENTITY_SIZE); offset += ENTITY_SIZE) {
 			
@@ -717,7 +717,10 @@ public class World {
 					
 				} else {
 					g.drawImage(textures[tex_idx], -1, 1, 2, -2, null);
-					
+					if(entities[offset + REVERSED] > 0) {
+						g.setColor(new Color(1.0f, 0.0f, 0.0f, 0.5f));
+						g.fillOval(-1, -1, 2, 2);
+					}
 					if(entities[offset + KIND] == KIND_VAL_PLAYER){
 						int playerIdx = -1;
 						for(int i = 0; i < userIDs.length; ++i) {
@@ -734,10 +737,7 @@ public class World {
 						g.drawString(name, 0, 0);
 					}
 					
-					if(entities[offset + REVERSED] > 0) {
-						g.setColor(new Color(1.0f, 0.0f, 0.0f, 0.5f));
-						g.fillOval(-1, -1, 2, 2);
-					}
+					
 				}
 				
 				g.setTransform(baseTrans);
