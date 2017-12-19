@@ -717,6 +717,23 @@ public class World {
 					
 				} else {
 					g.drawImage(textures[tex_idx], -1, 1, 2, -2, null);
+					
+					if(entities[offset + KIND] == KIND_VAL_PLAYER){
+						int playerIdx = -1;
+						for(int i = 0; i < userIDs.length; ++i) {
+							if((offset / ENTITY_SIZE) == userIDs[i]) {
+								playerIdx = i;
+								break;
+							}
+						}
+						
+						String name = usernames[playerIdx];
+						g.scale(0.05, -0.05);
+						g.setFont(new Font(g.getFont().getName(), Font.PLAIN, 10));
+						g.translate(-g.getFontMetrics().stringWidth(name)/2, g.getFontMetrics().getHeight() / 4);
+						g.drawString(name, 0, 0);
+					}
+					
 					if(entities[offset + REVERSED] > 0) {
 						g.setColor(new Color(1.0f, 0.0f, 0.0f, 0.5f));
 						g.fillOval(-1, -1, 2, 2);
