@@ -29,7 +29,7 @@ import java.util.concurrent.CancellationException;
 public class Server implements Runnable {
 
 	public static final int PLAYER_VELOCITY_MAGNITUDE = 100;
-	private static final int PLAYER_PARTICLE_COUNT = 260;
+	private static final int PLAYER_PARTICLE_COUNT = 100;
 
 	private static final int BULLET_VELOCITY_MAGNITUDE = 3 * PLAYER_VELOCITY_MAGNITUDE;
 
@@ -265,7 +265,7 @@ public class Server implements Runnable {
 			world.set(bullet, World.POSITION_Y, bulletStartPosY);
 			world.set(bullet, World.VELOCITY_X, bulletVelX);
 			world.set(bullet, World.VELOCITY_Y, bulletVelY);
-			world.set(bullet, World.LIFETIME, 1.5f);
+			world.set(bullet, World.LIFETIME, 2.0f);
 			world.set(bullet, World.COLOR_R, 178.0f/255.0f);
 			world.set(bullet, World.COLOR_G, 123.0f/255.0f);
 			world.set(bullet, World.COLOR_B, 13.0f/255.0f);
