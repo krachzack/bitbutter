@@ -20,7 +20,6 @@ public class KeyInput implements AWTEventListener {
 	}
 	
 	public void keyPressed(KeyEvent e) {
-		System.out.println(e.getKeyChar());
 		lock.lock();
 		try {
 			switch (e.getKeyCode()) {
