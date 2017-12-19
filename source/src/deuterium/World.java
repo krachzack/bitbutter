@@ -54,7 +54,7 @@ public class World {
 	private static final int TEX_INDEX_SIZE = 1;
 	private static final int ENTITY_SIZE = POSITION_SIZE + VELOCITY_SIZE + COLOR_SIZE + DIMENSION_SIZE + IN_USE_SIZE + REVERSED_SIZE + COLLISION_ENABLED_SIZE + KIND_SIZE + TEX_INDEX_SIZE;
 	
-	private static final int ENTITY_COUNT_MAX = 256;
+	private static final int ENTITY_COUNT_MAX = 256 + 240; // Because Paul wanted MORE particles
 	private static final int PAST_FRAMES_MAX = 500;
 	
 	/** Amount of stars at least in the game world, if drops below that, will spawn */

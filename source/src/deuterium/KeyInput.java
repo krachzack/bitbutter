@@ -6,7 +6,7 @@ import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.util.concurrent.locks.ReentrantLock;
 
-public class KeyboardLord implements AWTEventListener {
+public class KeyInput implements AWTEventListener {
 	private static final boolean[] WASD = new boolean[4];
 	private static final ReentrantLock lock = new ReentrantLock();
 
@@ -20,6 +20,7 @@ public class KeyboardLord implements AWTEventListener {
 	}
 	
 	public void keyPressed(KeyEvent e) {
+		System.out.println(e.getKeyChar());
 		lock.lock();
 		try {
 			switch (e.getKeyCode()) {

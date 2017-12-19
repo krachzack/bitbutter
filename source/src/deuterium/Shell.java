@@ -80,7 +80,7 @@ public class Shell {
 		try {
 			remainingShootCooldown = Math.max(0, remainingShootCooldown-dt);
 			
-			boolean[] wasd = KeyboardLord.getWASD();
+			boolean[] wasd = KeyInput.getWASD();
 			
 			float keyboardDirectionX = ((wasd[3] ? 1f : 0f) - (wasd[1] ? 1f : 0f)) * (wasd[0] != wasd[2] ? 0.7f : 1f);
 			float keyboardDirectionY = ((wasd[0] ? 1f : 0f) - (wasd[2] ? 1f : 0f)) * (wasd[1] != wasd[3] ? 0.7f : 1f);
@@ -115,7 +115,7 @@ public class Shell {
 	}
 
 	private static void initKeyboard() {
-		Toolkit.getDefaultToolkit().addAWTEventListener(new KeyboardLord(), AWTEvent.KEY_EVENT_MASK);
+		Toolkit.getDefaultToolkit().addAWTEventListener(new KeyInput(), AWTEvent.KEY_EVENT_MASK);
 	}
 
 	private static void initMouseClicks() {
