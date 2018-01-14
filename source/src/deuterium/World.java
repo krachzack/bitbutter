@@ -770,6 +770,13 @@ public class World {
 		
 		g.setFont(oldFont);
 		g.setColor(oldColor);
+		
+		if(remainingGameDuration <= 0) {
+			renderWinner(g, oldFont);
+			
+			g.setFont(oldFont);
+			g.setColor(oldColor);
+		}
 	}
 
 	private void renderScores(Graphics2D g, Font baseFont) {
@@ -852,5 +859,64 @@ public class World {
 		} else {
 			return "00:00";
 		}
+	}
+
+	private void renderWinner(Graphics2D g, Font baseFont) {
+		final int WINNER_PADDING_TOP = (int) (Shell.HEIGHT * 0.4f);
+		final int WINNER_FONT_HEIGHT = 22;
+		Font winnerMsgFont = new Font(baseFont.getFontName(), Font.BOLD, WINNER_FONT_HEIGHT);
+		Font localMsgFont = new Font(baseFont.getFontName(), Font.PLAIN, WINNER_FONT_HEIGHT / 2);
+		
+		int winnerIdx = findWinnerIdx();
+		boolean localWin = winnerIdx == findLocalPlayerScoreIdx();
+		String winnerUsername = usernames[winnerIdx];
+		
+		String winnerMsg = (winnerUsername + " got the job!").toUpperCase();
+		String localMsg = (localWin ? "Fantastic, you won! Call yourself star of the solar system!" : "You lost! Maybe next time, little planet.").toUpperCase();
+		
+		g.setColor(localWin ? new Color(20, 140, 20, 200) : new Color(140, 20, 20, 200));
+		g.fillRect(0, 0, Shell.WIDTH, Shell.HEIGHT);
+		
+		g.setColor(Color.WHITE);
+		g.setFont(winnerMsgFont);
+		FontMetrics metrics = g.getFontMetrics(winnerMsgFont);
+		
+		float x = 0.5f * (Shell.WIDTH - metrics.stringWidth(winnerMsg));
+		float y = WINNER_PADDING_TOP + metrics.getHeight();
+		
+		g.drawString(winnerMsg, x, y);
+		
+		y += metrics.getHeight();
+		
+		g.setFont(localMsgFont);
+		metrics = g.getFontMetrics(localMsgFont);
+		
+		x = 0.5f * (Shell.WIDTH - metrics.stringWidth(localMsg));
+		
+		g.drawString(localMsg, x, y);
+	}
+
+	private int findWinnerIdx() {
+		int winnerIdx = -1;
+		int winnerScore = Integer.MIN_VALUE;
+		
+		for(int i = 0; i < scores.length; ++i) {
+			if(scores[i] > winnerScore) {
+				winnerIdx = i;
+				winnerScore = scores[i];
+			}
+		}
+		
+		return winnerIdx;
+	}
+	
+	private int findLocalPlayerScoreIdx() {
+		for(int i = 0; i < scores.length; ++i) {
+			if(userIDs[i] == localPlayerID) {
+				return i;
+			}
+		}
+		
+		return -1;
 	}
 }
