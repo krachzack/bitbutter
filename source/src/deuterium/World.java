@@ -11,7 +11,8 @@ import java.util.Arrays;
 import javax.imageio.ImageIO;
 
 public class World {
-	public static final float GAME_DURATION = 1 * 60.0f;
+	public static final float GAME_DURATION =  2 * 60.0f;
+	public static final float PREPARE_TIME = 10.0f;
 	
 	private static final int DRAINED_STAR_SPEED = 110;
 	public static final int POSITION_X = 0;
@@ -107,7 +108,7 @@ public class World {
 	public float[] particles = new float[ENTITY_SIZE * PARTICLE_COUNT_MAX];
 	public int localPlayerID = -1;
 	
-	private float remainingGameDuration = GAME_DURATION;
+	private float remainingGameDuration = GAME_DURATION + PREPARE_TIME;
 	
 	/** Names of all logged in users, sorted by score descending */
 	private String[] usernames = new String[0];
@@ -298,8 +299,10 @@ public class World {
 	
 	public void update(float dt) {
 		remainingGameDuration -= dt;
-		
-		if(remainingGameDuration > 0) {
+		if(remainingGameDuration > GAME_DURATION) {
+			// Still preparing, only update after preparation time
+			addStarsIfMissing();
+		} else if(remainingGameDuration > 0) {
 			if(timeReverse) {
 				// Restore the old frame
 				System.arraycopy(entities, ENTITY_COUNT_MAX*ENTITY_SIZE, entities, 0, entities.length - (ENTITY_COUNT_MAX*ENTITY_SIZE));
@@ -855,6 +858,7 @@ public class World {
 						g.scale(0.05, -0.05);
 						g.setFont(new Font(g.getFont().getName(), Font.PLAIN, 10));
 						g.translate(-g.getFontMetrics().stringWidth(name)/2, g.getFontMetrics().getHeight() / 4);
+						g.setColor(Color.WHITE);
 						g.drawString(name, 0, 0);
 					}
 					
@@ -882,6 +886,15 @@ public class World {
 		Font oldFont = g.getFont();
 		Color oldColor = g.getColor();
 		
+		if(remainingGameDuration > GAME_DURATION) {
+			renderInfoScreen(g, oldFont, new Color(100, 100, 100, 220), "Deuterium", "Preparing game... " + scores.length + " players have joined", "Made with love by: Paul Lonauer, Philipp Stadler, Michael Temper");
+		} else if(remainingGameDuration <= 0) {
+			renderWinner(g, oldFont);
+		}
+		
+		g.setFont(oldFont);
+		g.setColor(oldColor);
+		
 		renderScores(g, oldFont);
 		
 		g.setFont(oldFont);
@@ -891,13 +904,6 @@ public class World {
 		
 		g.setFont(oldFont);
 		g.setColor(oldColor);
-		
-		if(remainingGameDuration <= 0) {
-			renderWinner(g, oldFont);
-			
-			g.setFont(oldFont);
-			g.setColor(oldColor);
-		}
 	}
 
 	private void renderScores(Graphics2D g, Font baseFont) {
@@ -943,7 +949,8 @@ public class World {
 		final int REMAINING_TIME_PADDING = 14;
 		final int REMAINING_TIME_FONT_HEIGHT = 28;
 		
-		String timeStr = formatRemainingTime();
+		float time = (remainingGameDuration > GAME_DURATION) ? (remainingGameDuration - GAME_DURATION) : remainingGameDuration;
+		String timeStr = formatDuration(time);
 		
 		Font timeFont = new Font(baseFont.getFontName(), Font.BOLD, REMAINING_TIME_FONT_HEIGHT);
 		g.setColor(Color.WHITE);
@@ -956,9 +963,9 @@ public class World {
 		g.drawString(timeStr, x, y);
 	}
 
-	private String formatRemainingTime() {
-		if(remainingGameDuration > 0) {
-			int remainingSecs = (int) Math.ceil(remainingGameDuration);
+	private String formatDuration(float duration) {
+		if(duration > 0) {
+			int remainingSecs = (int) Math.ceil(duration);
 			int minutes = remainingSecs / 60;
 			int seconds = remainingSecs % 60;
 			
@@ -994,27 +1001,46 @@ public class World {
 		
 		String winnerMsg = (winnerUsername + " got the job!").toUpperCase();
 		String localMsg = (localWin ? "Fantastic, you won! Call yourself star of the solar system!" : "You lost! Maybe next time, little planet.").toUpperCase();
+		Color bgColor = localWin ? new Color(20, 140, 20, 200) : new Color(140, 20, 20, 200);
 		
-		g.setColor(localWin ? new Color(20, 140, 20, 200) : new Color(140, 20, 20, 200));
+		renderInfoScreen(g, baseFont, bgColor, winnerMsg, localMsg, "");
+	}
+	
+	private void renderInfoScreen(Graphics2D g, Font baseFont, Color backgroundColor, String bigWords, String smallWords, String smallWords2) {
+		final int WINNER_PADDING_TOP = (int) (Shell.HEIGHT * 0.4f);
+		final int WINNER_FONT_HEIGHT = 22;
+		Font bigWordsFont = new Font(baseFont.getFontName(), Font.BOLD, WINNER_FONT_HEIGHT);
+		Font smallWordsFont = new Font(baseFont.getFontName(), Font.PLAIN, WINNER_FONT_HEIGHT / 2);
+		
+		bigWords = bigWords.toUpperCase();
+		smallWords = smallWords.toUpperCase();
+		//smallWords2 = smallWords2.toUpperCase();
+		
+		g.setColor(backgroundColor);
 		g.fillRect(0, 0, Shell.WIDTH, Shell.HEIGHT);
 		
 		g.setColor(Color.WHITE);
-		g.setFont(winnerMsgFont);
-		FontMetrics metrics = g.getFontMetrics(winnerMsgFont);
+		g.setFont(bigWordsFont);
+		FontMetrics metrics = g.getFontMetrics(bigWordsFont);
 		
-		float x = 0.5f * (Shell.WIDTH - metrics.stringWidth(winnerMsg));
+		float x = 0.5f * (Shell.WIDTH - metrics.stringWidth(bigWords));
 		float y = WINNER_PADDING_TOP + metrics.getHeight();
 		
-		g.drawString(winnerMsg, x, y);
+		g.drawString(bigWords, x, y);
 		
 		y += metrics.getHeight();
 		
-		g.setFont(localMsgFont);
-		metrics = g.getFontMetrics(localMsgFont);
+		g.setFont(smallWordsFont);
+		metrics = g.getFontMetrics(smallWordsFont);
 		
-		x = 0.5f * (Shell.WIDTH - metrics.stringWidth(localMsg));
+		x = 0.5f * (Shell.WIDTH - metrics.stringWidth(smallWords));
 		
-		g.drawString(localMsg, x, y);
+		g.drawString(smallWords, x, y);
+		
+		y += metrics.getHeight();
+		x = 0.5f * (Shell.WIDTH - metrics.stringWidth(smallWords2));
+		
+		g.drawString(smallWords2, x, y);
 	}
 
 	private int findWinnerIdx() {
