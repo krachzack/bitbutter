@@ -14,6 +14,8 @@ import java.util.Arrays;
 import javax.imageio.ImageIO;
 
 public class World {
+	public static final float GAME_DURATION = 10;//3 * 60.0f;
+	
 	private static final int DRAINED_STAR_SPEED = 110;
 	public static final int POSITION_X = 0;
 	public static final int POSITION_Y = 1;
@@ -104,6 +106,8 @@ public class World {
 	public float[] entities = new float[ENTITY_SIZE * ENTITY_COUNT_MAX * PAST_FRAMES_MAX];
 	public int localPlayerID = -1;
 	
+	private float remainingGameDuration = GAME_DURATION;
+	
 	/** Names of all logged in users, sorted by score descending */
 	private String[] usernames = new String[0];
 	private int[] userIDs = new int[0];
@@ -135,7 +139,7 @@ public class World {
 		}
 		
 		// The first few floats are the scores corresponding to the usernames
-		float[] data = new float[usernames.length + usernames.length + ENTITY_SIZE * ENTITY_COUNT_MAX];
+		float[] data = new float[usernames.length + usernames.length + 1 + ENTITY_SIZE * ENTITY_COUNT_MAX];
 		for(int i = 0; i < scores.length; ++i) {
 			data[i] = scores[i];
 		}
@@ -145,8 +149,11 @@ public class World {
 			data[scores.length + i] = userIDs[i];
 		}
 		
+		// Then, the remaining game time in seconds
+		data[scores.length + scores.length + 0] = remainingGameDuration;
+		
 		// Then comes the actual world data
-		System.arraycopy(entities, 0, data, scores.length + scores.length, ENTITY_SIZE * ENTITY_COUNT_MAX);
+		System.arraycopy(entities, 0, data, scores.length + scores.length + 1, ENTITY_SIZE * ENTITY_COUNT_MAX);
 		
 		return new UniversalDTO(-1, joinedUsernames.toString(), "update-full", data);
 	}
@@ -174,8 +181,10 @@ public class World {
 				userIDs[i] = Math.round(data[usernames.length + i]);
 			}
 			
+			// Then remaining game time
+			remainingGameDuration = data[scores.length + scores.length];
 			
-			System.arraycopy(data, scores.length+scores.length, entities, 0, ENTITY_SIZE * ENTITY_COUNT_MAX);
+			System.arraycopy(data, scores.length+scores.length+1, entities, 0, ENTITY_SIZE * ENTITY_COUNT_MAX);
 		} else if(dto.getEvent().equals("join-acknowledge")) {
 			localPlayerID = (int) dto.getData()[0];
 			System.out.println("Server acknowledged this player joining and assigned UID: " + localPlayerID);
@@ -286,32 +295,35 @@ public class World {
 	}
 	
 	public void update(float dt) {
-		if(timeReverse) {
-			// Restore the old frame
-			System.arraycopy(entities, ENTITY_COUNT_MAX*ENTITY_SIZE, entities, 0, entities.length - (ENTITY_COUNT_MAX*ENTITY_SIZE));
-			--pastFrameCount;
-			
-			if(pastFrameCount == 0) {
-				timeReverse = false;
+		remainingGameDuration -= dt;
+		
+		if(remainingGameDuration > 0) {
+			if(timeReverse) {
+				// Restore the old frame
+				System.arraycopy(entities, ENTITY_COUNT_MAX*ENTITY_SIZE, entities, 0, entities.length - (ENTITY_COUNT_MAX*ENTITY_SIZE));
+				--pastFrameCount;
+				
+				if(pastFrameCount == 0) {
+					timeReverse = false;
+				}
+			} else {
+				integratePosition(dt);
+				timeReverse(dt);
+				detectAndRespondToCollisions(dt);
+				addStarsIfMissing();
+				sortScores();
+				handleLifetimes(dt);
+				
+				// Archive the old frame
+				System.arraycopy(entities, 0, entities, ENTITY_COUNT_MAX*ENTITY_SIZE, entities.length - (ENTITY_COUNT_MAX*ENTITY_SIZE));
+				++pastFrameCount;
 			}
-		} else {
-			integratePosition(dt);
-			timeReverse(dt);
-			detectAndRespondToCollisions(dt);
-			addStarsIfMissing();
-			sortScores();
-			handleLifetimes(dt);
-			
-			// Archive the old frame
-			System.arraycopy(entities, 0, entities, ENTITY_COUNT_MAX*ENTITY_SIZE, entities.length - (ENTITY_COUNT_MAX*ENTITY_SIZE));
-			++pastFrameCount;
 		}
 	}
 
 	private void handleLifetimes(float dt) {
 		for(int entOffset = 0; entOffset < (ENTITY_COUNT_MAX*ENTITY_SIZE); entOffset += ENTITY_SIZE) {
 			if(entities[entOffset + IN_USE] == 1.0 && entities[entOffset + LIFETIME] > 0) {
-				System.out.println("Lifetime: " + entities[entOffset + LIFETIME]);
 				entities[entOffset + LIFETIME] -= dt;
 				if(entities[entOffset + LIFETIME] <= 0.0f) {
 					entities[entOffset + IN_USE] = 0.0f;
@@ -746,6 +758,21 @@ public class World {
 	}
 
 	private void renderHUD(Graphics2D g) {
+		Font oldFont = g.getFont();
+		Color oldColor = g.getColor();
+		
+		renderScores(g, oldFont);
+		
+		g.setFont(oldFont);
+		g.setColor(oldColor);
+		
+		renderRemainingTime(g, oldFont);
+		
+		g.setFont(oldFont);
+		g.setColor(oldColor);
+	}
+
+	private void renderScores(Graphics2D g, Font baseFont) {
 		final int MAX_VISIBLE_NAMES = 5;
 		// Pixels from the edge of the window top and right
 		final int HIGHSCORE_PADDING_TOP = 25;
@@ -756,14 +783,12 @@ public class World {
 		final int HIGHSCORE_FONT_BOLD_HEIGHT = 15;
 		final int HIGHSCORE_LINE_HEIGHT = (int) (HIGHSCORE_FONT_HEIGHT * 1.7);
 		
-		Font oldFont = g.getFont();
-		Color oldColor = g.getColor();
-		Font newFont = new Font(oldFont.getFontName(), Font.PLAIN, HIGHSCORE_FONT_HEIGHT);
-		Font boldFont = new Font(oldFont.getFontName(), Font.BOLD, HIGHSCORE_FONT_BOLD_HEIGHT);
-		FontMetrics metrics = g.getFontMetrics(newFont);
+		Font newFont = new Font(baseFont.getFontName(), Font.PLAIN, HIGHSCORE_FONT_HEIGHT);
+		Font boldFont = new Font(baseFont.getFontName(), Font.BOLD, HIGHSCORE_FONT_BOLD_HEIGHT);
 		
 		g.setFont(newFont);
 		g.setColor(Color.WHITE);
+		FontMetrics metrics = g.getFontMetrics(newFont);
 		
 		for(int playerIdx = 0; playerIdx < usernames.length && playerIdx < MAX_VISIBLE_NAMES; ++playerIdx) {
 			if(userIDs[playerIdx] == localPlayerID) {
@@ -784,8 +809,48 @@ public class World {
 				g.setFont(newFont);
 			}
 		}
+	}
+
+	private void renderRemainingTime(Graphics2D g, Font baseFont) {
+		final int REMAINING_TIME_PADDING = 14;
+		final int REMAINING_TIME_FONT_HEIGHT = 28;
 		
-		g.setFont(oldFont);
-		g.setColor(oldColor);
+		String timeStr = formatRemainingTime();
+		
+		Font timeFont = new Font(baseFont.getFontName(), Font.BOLD, REMAINING_TIME_FONT_HEIGHT);
+		g.setColor(Color.WHITE);
+		g.setFont(timeFont);
+		
+		FontMetrics metr = g.getFontMetrics(timeFont);
+		
+		float x = 0.5f * (Shell.WIDTH - metr.stringWidth(timeStr));
+		float y = REMAINING_TIME_PADDING + metr.getHeight();
+		g.drawString(timeStr, x, y);
+	}
+
+	private String formatRemainingTime() {
+		if(remainingGameDuration > 0) {
+			int remainingSecs = (int) Math.ceil(remainingGameDuration);
+			int minutes = remainingSecs / 60;
+			int seconds = remainingSecs % 60;
+			
+			StringBuilder timeStr = new StringBuilder(5);
+			
+			if(minutes < 10) {
+				timeStr.append('0');
+			}
+			
+			timeStr.append(minutes);
+			timeStr.append(':');
+			
+			if(seconds < 10) {
+				timeStr.append('0');
+			}
+			timeStr.append(seconds);
+			
+			return timeStr.toString();
+		} else {
+			return "00:00";
+		}
 	}
 }

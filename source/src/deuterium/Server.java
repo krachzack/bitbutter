@@ -27,7 +27,7 @@ import java.util.concurrent.CancellationException;
  * @see https://examples.javacodegeeks.com/core-java/nio/java-nio-socket-example/
  */
 public class Server implements Runnable {
-
+	
 	public static final int PLAYER_VELOCITY_MAGNITUDE = 100;
 	private static final int PLAYER_PARTICLE_COUNT = 100;
 
