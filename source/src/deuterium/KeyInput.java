@@ -3,7 +3,6 @@ package deuterium;
 import java.awt.AWTEvent;
 import java.awt.event.AWTEventListener;
 import java.awt.event.KeyEvent;
-import java.awt.event.KeyListener;
 import java.util.concurrent.locks.ReentrantLock;
 
 public class KeyInput implements AWTEventListener {

@@ -4,7 +4,6 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.net.InetSocketAddress;
-import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.nio.channels.CancelledKeyException;
 import java.nio.channels.SelectableChannel;
@@ -12,14 +11,12 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
-import java.util.Arrays;
-import java.util.Date;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Random;
 import java.util.Set;
 import java.util.WeakHashMap;
-import java.util.concurrent.CancellationException;
 
 /**
  * 
@@ -350,7 +347,7 @@ public class Server implements Runnable {
 	}
 
 	private int createPlayer() {
-		int playerID = world.addPlayer(NameGenerator.generateName());
+		int playerID = world.addPlayer(generateName());
 
 		// By randomizing spawn position the chance for players spawning on top of each
 		// other are reduced. It can still happen though, and then they are in rewind forever
@@ -427,4 +424,25 @@ public class Server implements Runnable {
 			nextParticleSpawnWaitTime -= dt;
 		}
 	}
+	
+	/**
+	 * @see http://www.java-gaming.org/index.php?topic=35802.0
+	 */
+//	public class NameGenerator {
+
+		private static String[] Beginning = { "Kr", "Ca", "Ra", "Mrok", "Cru", "Ray", "Bre", "Zed", "Drak", "Mor", "Jag",
+				"Mer", "Jar", "Mjol", "Zork", "Mad", "Cry", "Zur", "Creo", "Azak", "Azur", "Rei", "Cro", "Mar", "Luk" };
+		private static String[] Middle = { "air", "ir", "mi", "sor", "mee", "clo", "red", "cra", "ark", "arc", "miri",
+				"lori", "cres", "mur", "zer", "marac", "zoir", "slamar", "salmar", "urak" };
+		private static String[] End = { "d", "ed", "ark", "arc", "es", "er", "der", "tron", "med", "ure", "zur", "cred",
+				"mur" };
+
+		private static Random rand = new Random();
+
+		public static String generateName() {
+			return Beginning[rand.nextInt(Beginning.length)] + Middle[rand.nextInt(Middle.length)]
+					+ End[rand.nextInt(End.length)];
+		}
+
+//	}
 }
