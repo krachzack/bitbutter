@@ -175,7 +175,7 @@ public class Shell {
 		canvas = new Canvas();
 		canvas.setSize(WIDTH, HEIGHT);
 		
-		JFrame frame = new JFrame();
+		JFrame frame = new JFrame("deuterium");
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		frame.setSize(WIDTH, HEIGHT);
 		frame.setIgnoreRepaint(true);

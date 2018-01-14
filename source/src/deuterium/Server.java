@@ -294,12 +294,34 @@ public class Server implements Runnable {
 	}
 
 	private void initTraps() {
-		for(int i = 0; i < 10; ++i) {
+		int[] trapIDs = new int[10];
+		
+		for(int i = 0; i < trapIDs.length; ++i) {
 			int trap = world.addEntity();
+			
+			float x, y;
+			final float diameter = 150.0f;
 
-			float radius = (float) (20.0 * Math.min(Math.random() + 0.2, 1.0));
-			float x = (float) ((Math.random() - 0.5) * Shell.WIDTH);
-			float y = (float) ((Math.random() - 0.5) * Shell.HEIGHT);
+			// Choose non-colliding start position with rejection sampling
+			boolean hasInitialColission;
+			do {
+				hasInitialColission = false;
+				
+				x = (float) ((Math.random() - 0.5) * Shell.WIDTH);
+				y = (float) ((Math.random() - 0.5) * Shell.HEIGHT);
+				
+				for(int trapIDIdx = 0; trapIDIdx < i; ++trapIDIdx) {
+					int other = trapIDs[trapIDIdx];
+					
+					float distX = world.get(other, World.POSITION_X) - x;
+					float distY = world.get(other, World.POSITION_Y) - y;
+					float distSqr = distX*distX + distY*distY;
+					
+					if(distSqr < (diameter*diameter)) {
+						hasInitialColission = true;
+					}
+				}
+			} while(hasInitialColission);
 			
 			float vx = (float) (Math.random() - 0.5);
 			float vy = (float) (Math.random() - 0.5);
@@ -307,10 +329,11 @@ public class Server implements Runnable {
 			vy /= Math.sqrt(vx*vx + vy*vy);
 			vx *= 200;
 			vy *= 200;
+//			vx = 0;
+//			vy = 0;
 
-
-			world.set(trap, World.DIMENSION_X, 150.0f);
-			world.set(trap, World.DIMENSION_Y, 150.0f);
+			world.set(trap, World.DIMENSION_X, diameter);
+			world.set(trap, World.DIMENSION_Y, diameter);
 			world.set(trap, World.POSITION_X, x);
 			world.set(trap, World.POSITION_Y, y);
 			world.set(trap, World.VELOCITY_X, vx);
@@ -321,6 +344,8 @@ public class Server implements Runnable {
 			//world.set(trap, World.COLOR_B, 121.0f/255.0f);
 			world.set(trap, World.KIND, World.KIND_VAL_TRAP);
 			world.set(trap, World.COLLISION_ENABLED, 1.0f);
+			
+			trapIDs[i] = trap;
 		}
 	}
 

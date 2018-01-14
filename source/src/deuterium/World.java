@@ -501,6 +501,25 @@ public class World {
 		} else if(kind0 == KIND_VAL_PLAYER || kind1 == KIND_VAL_PLAYER) {
 			// Player-to-X colission, except player-to-bullet which is handled before
 			respondToPlayerColission(offset0, offset1);
+		} else if(kind0 == KIND_VAL_TRAP || kind1 == KIND_VAL_TRAP) {
+			respondToTrapColission(offset0, offset1);
+		}
+	}
+
+	private void respondToTrapColission(int offset0, int offset1) {
+		float kind0 = entities[offset0 + KIND];
+		float kind1 = entities[offset1 + KIND];
+		
+		if(kind0 != KIND_VAL_TRAP && kind1 == KIND_VAL_TRAP) {
+			respondToTrapColission(offset1, offset0);
+		}
+		
+		if(kind1 == KIND_VAL_TRAP) {
+			entities[offset0 + VELOCITY_X] = -entities[offset0 + VELOCITY_X];
+			entities[offset0 + VELOCITY_Y] = -entities[offset0 + VELOCITY_Y];
+			
+			entities[offset1 + VELOCITY_X] = -entities[offset1 + VELOCITY_X];
+			entities[offset1 + VELOCITY_Y] = -entities[offset1 + VELOCITY_Y];
 		}
 	}
 
