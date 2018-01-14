@@ -88,10 +88,10 @@ public class World {
 		BufferedImage[] texturesToSave = null;
 		try {
 			texturesToSave = new BufferedImage[] {
-					null,
-					ImageIO.read(new File("earth.png")),
-					ImageIO.read(new File("moon_small.png")),
-					ImageIO.read(new File("black_hole_soak.png"))
+				null,
+				ImageIO.read(World.class.getResource("/resources/earth.png")),
+				ImageIO.read(World.class.getResource("/resources/moon_small.png")),
+				ImageIO.read(World.class.getResource("/resources/black_hole_soak.png"))
 			
 			};
 		} catch (IOException e) {
