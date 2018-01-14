@@ -5,13 +5,14 @@ import java.awt.FontMetrics;
 import java.awt.Graphics2D;
 import java.awt.geom.AffineTransform;
 import java.awt.image.BufferedImage;
-import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
 
 import javax.imageio.ImageIO;
 
 public class World {
+	public static final float GAME_DURATION = 20;//3 * 60.0f;
+	
 	private static final int DRAINED_STAR_SPEED = 110;
 	public static final int POSITION_X = 0;
 	public static final int POSITION_Y = 1;
@@ -36,6 +37,8 @@ public class World {
 	
 	public static final int TEX_INDEX = 13;
 	
+	public static final int LIFETIME = 14;
+	
 	public static final float KIND_VAL_PLAYER = 0.0f;
 	public static final float KIND_VAL_TRAP = 1.0f;
 	public static final float KIND_VAL_BULLET = 2.0f;
@@ -50,9 +53,10 @@ public class World {
 	private static final int COLLISION_ENABLED_SIZE = 1;
 	private static final int KIND_SIZE = 1;
 	private static final int TEX_INDEX_SIZE = 1;
-	private static final int ENTITY_SIZE = POSITION_SIZE + VELOCITY_SIZE + COLOR_SIZE + DIMENSION_SIZE + IN_USE_SIZE + REVERSED_SIZE + COLLISION_ENABLED_SIZE + KIND_SIZE + TEX_INDEX_SIZE;
-
-	private static final int ENTITY_COUNT_MAX = 256 + 500;
+	private static final int LIFETIME_SIZE = 1;
+	private static final int ENTITY_SIZE = POSITION_SIZE + VELOCITY_SIZE + COLOR_SIZE + DIMENSION_SIZE + IN_USE_SIZE + REVERSED_SIZE + COLLISION_ENABLED_SIZE + KIND_SIZE + TEX_INDEX_SIZE + LIFETIME_SIZE;
+	
+	private static final int ENTITY_COUNT_MAX = 512;
 	private static final int PAST_FRAMES_MAX = 500;
 	private static final int PARTICLE_COUNT_MAX = 1024;
 	private static final float PARTICLE_SPAWN_INTERVAL = 0.03f;
@@ -69,6 +73,7 @@ public class World {
 	 * Drain a star containing 10% of the players points every DRAIN_INTERVAL
 	 */
 	private static final float DRAIN_FACTOR = 0.1f;
+//	private static final float DRAIN_STAR_LIFETIME = 2.0f;
 	
 	// The world is four times the area of the window, that is a rectangle with double sidelengths
 	private static final float MAX_POSITION_X = Shell.WIDTH;
@@ -83,10 +88,10 @@ public class World {
 		BufferedImage[] texturesToSave = null;
 		try {
 			texturesToSave = new BufferedImage[] {
-					null,
-					ImageIO.read(new File("earth.png")),
-					ImageIO.read(new File("moon_small.png")),
-					ImageIO.read(new File("black_hole_soak.png"))
+				null,
+				ImageIO.read(World.class.getResource("/resources/earth.png")),
+				ImageIO.read(World.class.getResource("/resources/moon_small.png")),
+				ImageIO.read(World.class.getResource("/resources/black_hole_soak.png"))
 			
 			};
 		} catch (IOException e) {
@@ -101,6 +106,8 @@ public class World {
 	public float[] entities = new float[ENTITY_SIZE * ENTITY_COUNT_MAX * PAST_FRAMES_MAX];
 	public float[] particles = new float[ENTITY_SIZE * PARTICLE_COUNT_MAX];
 	public int localPlayerID = -1;
+	
+	private float remainingGameDuration = GAME_DURATION;
 	
 	/** Names of all logged in users, sorted by score descending */
 	private String[] usernames = new String[0];
@@ -134,7 +141,7 @@ public class World {
 		}
 		
 		// The first few floats are the scores corresponding to the usernames
-		float[] data = new float[usernames.length + usernames.length + ENTITY_SIZE * ENTITY_COUNT_MAX];
+		float[] data = new float[usernames.length + usernames.length + 1 + ENTITY_SIZE * ENTITY_COUNT_MAX];
 		for(int i = 0; i < scores.length; ++i) {
 			data[i] = scores[i];
 		}
@@ -144,8 +151,11 @@ public class World {
 			data[scores.length + i] = userIDs[i];
 		}
 		
+		// Then, the remaining game time in seconds
+		data[scores.length + scores.length + 0] = remainingGameDuration;
+		
 		// Then comes the actual world data
-		System.arraycopy(entities, 0, data, scores.length + scores.length, ENTITY_SIZE * ENTITY_COUNT_MAX);
+		System.arraycopy(entities, 0, data, scores.length + scores.length + 1, ENTITY_SIZE * ENTITY_COUNT_MAX);
 		
 		return new UniversalDTO(-1, joinedUsernames.toString(), "update-full", data);
 	}
@@ -173,8 +183,10 @@ public class World {
 				userIDs[i] = Math.round(data[usernames.length + i]);
 			}
 			
+			// Then remaining game time
+			remainingGameDuration = data[scores.length + scores.length];
 			
-			System.arraycopy(data, scores.length+scores.length, entities, 0, ENTITY_SIZE * ENTITY_COUNT_MAX);
+			System.arraycopy(data, scores.length+scores.length+1, entities, 0, ENTITY_SIZE * ENTITY_COUNT_MAX);
 		} else if(dto.getEvent().equals("join-acknowledge")) {
 			localPlayerID = (int) dto.getData()[0];
 			System.out.println("Server acknowledged this player joining and assigned UID: " + localPlayerID);
@@ -285,24 +297,41 @@ public class World {
 	}
 	
 	public void update(float dt) {
-		if(timeReverse) {
-			// Restore the old frame
-			System.arraycopy(entities, ENTITY_COUNT_MAX*ENTITY_SIZE, entities, 0, entities.length - (ENTITY_COUNT_MAX*ENTITY_SIZE));
-			--pastFrameCount;
-			
-			if(pastFrameCount == 0) {
-				timeReverse = false;
+		remainingGameDuration -= dt;
+		
+		if(remainingGameDuration > 0) {
+			if(timeReverse) {
+				// Restore the old frame
+				System.arraycopy(entities, ENTITY_COUNT_MAX*ENTITY_SIZE, entities, 0, entities.length - (ENTITY_COUNT_MAX*ENTITY_SIZE));
+				--pastFrameCount;
+				
+				if(pastFrameCount == 0) {
+					timeReverse = false;
+				}
+			} else {
+				integratePosition(dt);
+				timeReverse(dt);
+				detectAndRespondToCollisions(dt);
+				addStarsIfMissing();
+				sortScores();
+				handleLifetimes(dt);
+				
+				// Archive the old frame
+				System.arraycopy(entities, 0, entities, ENTITY_COUNT_MAX*ENTITY_SIZE, entities.length - (ENTITY_COUNT_MAX*ENTITY_SIZE));
+				++pastFrameCount;
 			}
-		} else {
-			integratePosition(dt);
-			timeReverse(dt);
-			detectAndRespondToCollisions(dt);
-			addStarsIfMissing();
-			sortScores();
-			
-			// Archive the old frame
-			System.arraycopy(entities, 0, entities, ENTITY_COUNT_MAX*ENTITY_SIZE, entities.length - (ENTITY_COUNT_MAX*ENTITY_SIZE));
-			++pastFrameCount;
+		}
+	}
+
+	private void handleLifetimes(float dt) {
+		for(int entOffset = 0; entOffset < (ENTITY_COUNT_MAX*ENTITY_SIZE); entOffset += ENTITY_SIZE) {
+			if(entities[entOffset + IN_USE] == 1.0 && entities[entOffset + LIFETIME] > 0) {
+				entities[entOffset + LIFETIME] -= dt;
+				if(entities[entOffset + LIFETIME] <= 0.0f) {
+					entities[entOffset + IN_USE] = 0.0f;
+					entities[entOffset + LIFETIME] = 0.0f;
+				}
+			}
 		}
 	}
 
@@ -503,7 +532,71 @@ public class World {
 		} else if(kind0 == KIND_VAL_PLAYER || kind1 == KIND_VAL_PLAYER) {
 			// Player-to-X colission, except player-to-bullet which is handled before
 			respondToPlayerColission(offset0, offset1);
+		} else if(kind0 == KIND_VAL_TRAP || kind1 == KIND_VAL_TRAP) {
+			respondToTrapColission(offset0, offset1);
 		}
+	}
+
+	private void respondToTrapColission(int offset0, int offset1) {
+		float kind0 = entities[offset0 + KIND];
+		float kind1 = entities[offset1 + KIND];
+		
+		if(kind0 != KIND_VAL_TRAP && kind1 == KIND_VAL_TRAP) {
+			respondToTrapColission(offset1, offset0);
+		}
+		
+		if(kind1 == KIND_VAL_TRAP) {
+			float previousPosX0 = entities[1*ENTITY_COUNT_MAX*ENTITY_SIZE + offset0 + POSITION_X];
+			float previousPosY0 = entities[1*ENTITY_COUNT_MAX*ENTITY_SIZE + offset0 + POSITION_Y];
+			float previousPosX1 = entities[1*ENTITY_COUNT_MAX*ENTITY_SIZE + offset1 + POSITION_X];
+			float previousPosY1 = entities[1*ENTITY_COUNT_MAX*ENTITY_SIZE + offset1 + POSITION_Y];
+			
+			// Reflect velocity on the vector connecting the centers
+			float connectX = previousPosX1 - previousPosX0;
+			float connectY = previousPosY1 - previousPosY0;
+			float connectMag = (float) Math.sqrt(connectX*connectX + connectY*connectY);
+			connectX /= connectMag;
+			connectY /= connectMag;
+			
+//			float normalX = connectY;
+//			float normalY = -connectX;
+			float normalX = connectX;
+			float normalY = connectY;
+			
+			float vx0 = entities[offset0 + VELOCITY_X];
+			float vy0 = entities[offset0 + VELOCITY_Y];
+			float vx1 = entities[offset1 + VELOCITY_X];
+			float vy1 = entities[offset1 + VELOCITY_Y];
+			
+			float dot = vx0 * normalX + vy0 * normalY;
+			vx0 = vx0 - 2.0f * dot * normalX;
+			vy0 = vy0 - 2.0f * dot * normalY;
+			
+			normalX = -normalX;
+			normalY = -normalY;
+			dot = vx1 * normalX + vy1 * normalY;
+			vx1 = vx1 - 2.0f * dot * normalX;
+			vy1 = vy1 - 2.0f * dot * normalY;
+			
+			entities[offset0 + POSITION_X] = previousPosX0;
+			entities[offset0 + POSITION_Y] = previousPosY0;
+			entities[offset0 + VELOCITY_X] = vx0;
+			entities[offset0 + VELOCITY_Y] = vy0;
+			
+			entities[offset1 + POSITION_X] = previousPosX1;
+			entities[offset1 + POSITION_Y] = previousPosY1;
+			entities[offset1 + VELOCITY_X] = vx1;
+			entities[offset1 + VELOCITY_Y] = vy1;
+		}
+		
+//		// respond by inverting velocity vector
+//		if(kind1 == KIND_VAL_TRAP) {
+//			entities[offset0 + VELOCITY_X] = -entities[offset0 + VELOCITY_X];
+//			entities[offset0 + VELOCITY_Y] = -entities[offset0 + VELOCITY_Y];
+//			
+//			entities[offset1 + VELOCITY_X] = -entities[offset1 + VELOCITY_X];
+//			entities[offset1 + VELOCITY_Y] = -entities[offset1 + VELOCITY_Y];
+//		}
 	}
 
 	private void respondToBulletColission(int offset0, int offset1) {
@@ -596,6 +689,7 @@ public class World {
 				generateStarColor(star);
 				set(star, KIND, KIND_VAL_STAR);
 				set(star, COLLISION_ENABLED, 1.0f);
+				set(star, LIFETIME, 2.0f);
 			}
 		}
 	}
@@ -712,7 +806,7 @@ public class World {
 	private void renderEntitites(Graphics2D g) {
 		AffineTransform baseTrans = g.getTransform();
 		
-		angle += 0.001;
+		angle += 0.005;
 		
 		for(int offset = 0; offset < (ENTITY_COUNT_MAX*ENTITY_SIZE); offset += ENTITY_SIZE) {
 			
@@ -731,6 +825,27 @@ public class World {
 					
 				} else {
 					g.drawImage(textures[tex_idx], -1, 1, 2, -2, null);
+					if(entities[offset + REVERSED] > 0) {
+						g.setColor(new Color(1.0f, 0.0f, 0.0f, 0.5f));
+						g.fillOval(-1, -1, 2, 2);
+					}
+					if(entities[offset + KIND] == KIND_VAL_PLAYER){
+						int playerIdx = -1;
+						for(int i = 0; i < userIDs.length; ++i) {
+							if((offset / ENTITY_SIZE) == userIDs[i]) {
+								playerIdx = i;
+								break;
+							}
+						}
+						
+						String name = usernames[playerIdx];
+						g.scale(0.05, -0.05);
+						g.setFont(new Font(g.getFont().getName(), Font.PLAIN, 10));
+						g.translate(-g.getFontMetrics().stringWidth(name)/2, g.getFontMetrics().getHeight() / 4);
+						g.drawString(name, 0, 0);
+					}
+					
+					
 				}
 				
 				g.setTransform(baseTrans);
@@ -751,6 +866,28 @@ public class World {
 	}
 
 	private void renderHUD(Graphics2D g) {
+		Font oldFont = g.getFont();
+		Color oldColor = g.getColor();
+		
+		renderScores(g, oldFont);
+		
+		g.setFont(oldFont);
+		g.setColor(oldColor);
+		
+		renderRemainingTime(g, oldFont);
+		
+		g.setFont(oldFont);
+		g.setColor(oldColor);
+		
+		if(remainingGameDuration <= 0) {
+			renderWinner(g, oldFont);
+			
+			g.setFont(oldFont);
+			g.setColor(oldColor);
+		}
+	}
+
+	private void renderScores(Graphics2D g, Font baseFont) {
 		final int MAX_VISIBLE_NAMES = 5;
 		// Pixels from the edge of the window top and right
 		final int HIGHSCORE_PADDING_TOP = 25;
@@ -758,17 +895,21 @@ public class World {
 		final int HIGHSCORE_WIDTH = Shell.WIDTH / 5;
 		final int HIGHSCORE_LEFT = Shell.WIDTH - HIGHSCORE_PADDING_RIGHT - HIGHSCORE_WIDTH;
 		final int HIGHSCORE_FONT_HEIGHT = 13; 
+		final int HIGHSCORE_FONT_BOLD_HEIGHT = 15;
 		final int HIGHSCORE_LINE_HEIGHT = (int) (HIGHSCORE_FONT_HEIGHT * 1.7);
 		
-		Font oldFont = g.getFont();
-		Color oldColor = g.getColor();
-		Font newFont = new Font(oldFont.getFontName(), Font.BOLD, HIGHSCORE_FONT_HEIGHT);
-		FontMetrics metrics = g.getFontMetrics(newFont);
+		Font newFont = new Font(baseFont.getFontName(), Font.PLAIN, HIGHSCORE_FONT_HEIGHT);
+		Font boldFont = new Font(baseFont.getFontName(), Font.BOLD, HIGHSCORE_FONT_BOLD_HEIGHT);
 		
 		g.setFont(newFont);
 		g.setColor(Color.WHITE);
+		FontMetrics metrics = g.getFontMetrics(newFont);
 		
 		for(int playerIdx = 0; playerIdx < usernames.length && playerIdx < MAX_VISIBLE_NAMES; ++playerIdx) {
+			if(userIDs[playerIdx] == localPlayerID) {
+				g.setFont(boldFont);
+			}
+			
 			// y position of the baseline
 			final int y = HIGHSCORE_PADDING_TOP + playerIdx * HIGHSCORE_LINE_HEIGHT + HIGHSCORE_FONT_HEIGHT;
 			
@@ -778,9 +919,112 @@ public class World {
 			
 			final int scoreX = Shell.WIDTH - HIGHSCORE_PADDING_RIGHT - metrics.stringWidth(scoreString);
 			g.drawString(scoreString, scoreX, y);
+			
+			if(userIDs[playerIdx] == localPlayerID) {
+				g.setFont(newFont);
+			}
+		}
+	}
+
+	private void renderRemainingTime(Graphics2D g, Font baseFont) {
+		final int REMAINING_TIME_PADDING = 14;
+		final int REMAINING_TIME_FONT_HEIGHT = 28;
+		
+		String timeStr = formatRemainingTime();
+		
+		Font timeFont = new Font(baseFont.getFontName(), Font.BOLD, REMAINING_TIME_FONT_HEIGHT);
+		g.setColor(Color.WHITE);
+		g.setFont(timeFont);
+		
+		FontMetrics metr = g.getFontMetrics(timeFont);
+		
+		float x = 0.5f * (Shell.WIDTH - metr.stringWidth(timeStr));
+		float y = REMAINING_TIME_PADDING + metr.getHeight();
+		g.drawString(timeStr, x, y);
+	}
+
+	private String formatRemainingTime() {
+		if(remainingGameDuration > 0) {
+			int remainingSecs = (int) Math.ceil(remainingGameDuration);
+			int minutes = remainingSecs / 60;
+			int seconds = remainingSecs % 60;
+			
+			StringBuilder timeStr = new StringBuilder(5);
+			
+			if(minutes < 10) {
+				timeStr.append('0');
+			}
+			
+			timeStr.append(minutes);
+			timeStr.append(':');
+			
+			if(seconds < 10) {
+				timeStr.append('0');
+			}
+			timeStr.append(seconds);
+			
+			return timeStr.toString();
+		} else {
+			return "00:00";
+		}
+	}
+
+	private void renderWinner(Graphics2D g, Font baseFont) {
+		final int WINNER_PADDING_TOP = (int) (Shell.HEIGHT * 0.4f);
+		final int WINNER_FONT_HEIGHT = 22;
+		Font winnerMsgFont = new Font(baseFont.getFontName(), Font.BOLD, WINNER_FONT_HEIGHT);
+		Font localMsgFont = new Font(baseFont.getFontName(), Font.PLAIN, WINNER_FONT_HEIGHT / 2);
+		
+		int winnerIdx = findWinnerIdx();
+		boolean localWin = winnerIdx == findLocalPlayerScoreIdx();
+		String winnerUsername = usernames[winnerIdx];
+		
+		String winnerMsg = (winnerUsername + " got the job!").toUpperCase();
+		String localMsg = (localWin ? "Fantastic, you won! Call yourself star of the solar system!" : "You lost! Maybe next time, little planet.").toUpperCase();
+		
+		g.setColor(localWin ? new Color(20, 140, 20, 200) : new Color(140, 20, 20, 200));
+		g.fillRect(0, 0, Shell.WIDTH, Shell.HEIGHT);
+		
+		g.setColor(Color.WHITE);
+		g.setFont(winnerMsgFont);
+		FontMetrics metrics = g.getFontMetrics(winnerMsgFont);
+		
+		float x = 0.5f * (Shell.WIDTH - metrics.stringWidth(winnerMsg));
+		float y = WINNER_PADDING_TOP + metrics.getHeight();
+		
+		g.drawString(winnerMsg, x, y);
+		
+		y += metrics.getHeight();
+		
+		g.setFont(localMsgFont);
+		metrics = g.getFontMetrics(localMsgFont);
+		
+		x = 0.5f * (Shell.WIDTH - metrics.stringWidth(localMsg));
+		
+		g.drawString(localMsg, x, y);
+	}
+
+	private int findWinnerIdx() {
+		int winnerIdx = -1;
+		int winnerScore = Integer.MIN_VALUE;
+		
+		for(int i = 0; i < scores.length; ++i) {
+			if(scores[i] > winnerScore) {
+				winnerIdx = i;
+				winnerScore = scores[i];
+			}
 		}
 		
-		g.setFont(oldFont);
-		g.setColor(oldColor);
+		return winnerIdx;
+	}
+	
+	private int findLocalPlayerScoreIdx() {
+		for(int i = 0; i < scores.length; ++i) {
+			if(userIDs[i] == localPlayerID) {
+				return i;
+			}
+		}
+		
+		return -1;
 	}
 }

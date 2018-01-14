@@ -23,10 +23,10 @@ import java.util.WeakHashMap;
  * @see https://examples.javacodegeeks.com/core-java/nio/java-nio-socket-example/
  */
 public class Server implements Runnable {
-
+	
 	public static final int PLAYER_VELOCITY_MAGNITUDE = 100;
 //	Not deleting clientParticle stuff for now to see if we run into any problems like this.
-//	private static final int PLAYER_PARTICLE_COUNT = 260;
+//	private static final int PLAYER_PARTICLE_COUNT = 100;
 
 	private static final int BULLET_VELOCITY_MAGNITUDE = 3 * PLAYER_VELOCITY_MAGNITUDE;
 
@@ -257,6 +257,7 @@ public class Server implements Runnable {
 			world.set(bullet, World.POSITION_Y, bulletStartPosY);
 			world.set(bullet, World.VELOCITY_X, bulletVelX);
 			world.set(bullet, World.VELOCITY_Y, bulletVelY);
+			world.set(bullet, World.LIFETIME, 2.0f);
 			world.set(bullet, World.COLOR_R, 178.0f/255.0f);
 			world.set(bullet, World.COLOR_G, 123.0f/255.0f);
 			world.set(bullet, World.COLOR_B, 13.0f/255.0f);
@@ -285,18 +286,46 @@ public class Server implements Runnable {
 	}
 
 	private void initTraps() {
-		for(int i = 0; i < 5; ++i) {
+		int[] trapIDs = new int[10];
+		
+		for(int i = 0; i < trapIDs.length; ++i) {
 			int trap = world.addEntity();
+			
+			float x, y;
+			final float diameter = 150.0f;
 
-			//float radius = (float) (20.0 * Math.min(Math.random() + 0.2, 1.0));
-			float x = (float) ((Math.random() - 0.5) * Shell.WIDTH);
-			float y = (float) ((Math.random() - 0.5) * Shell.HEIGHT);
-			float vx = (float) ((2.0 * Math.random() - 1.0) * 30);
-			float vy = (float) ((-Math.random() - 0.1) * 30);
+			// Choose non-colliding start position with rejection sampling
+			boolean hasInitialColission;
+			do {
+				hasInitialColission = false;
+				
+				x = (float) ((Math.random() - 0.5) * Shell.WIDTH);
+				y = (float) ((Math.random() - 0.5) * Shell.HEIGHT);
+				
+				for(int trapIDIdx = 0; trapIDIdx < i; ++trapIDIdx) {
+					int other = trapIDs[trapIDIdx];
+					
+					float distX = world.get(other, World.POSITION_X) - x;
+					float distY = world.get(other, World.POSITION_Y) - y;
+					float distSqr = distX*distX + distY*distY;
+					
+					if(distSqr < (diameter*diameter)) {
+						hasInitialColission = true;
+					}
+				}
+			} while(hasInitialColission);
+			
+			float vx = (float) (Math.random() - 0.5);
+			float vy = (float) (Math.random() - 0.5);
+			vx /= Math.sqrt(vx*vx + vy*vy);
+			vy /= Math.sqrt(vx*vx + vy*vy);
+			vx *= 200;
+			vy *= 200;
+//			vx = 0;
+//			vy = 0;
 
-
-			world.set(trap, World.DIMENSION_X, 210.0f);
-			world.set(trap, World.DIMENSION_Y, 210.0f);
+			world.set(trap, World.DIMENSION_X, diameter);
+			world.set(trap, World.DIMENSION_Y, diameter);
 			world.set(trap, World.POSITION_X, x);
 			world.set(trap, World.POSITION_Y, y);
 			world.set(trap, World.VELOCITY_X, vx);
@@ -307,6 +336,8 @@ public class Server implements Runnable {
 			//world.set(trap, World.COLOR_B, 121.0f/255.0f);
 			world.set(trap, World.KIND, World.KIND_VAL_TRAP);
 			world.set(trap, World.COLLISION_ENABLED, 1.0f);
+			
+			trapIDs[i] = trap;
 		}
 	}
 
