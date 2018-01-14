@@ -621,8 +621,17 @@ public class World {
 				
 				float vx0 = entities[offset0 + VELOCITY_X];
 				float vy0 = entities[offset0 + VELOCITY_Y];
+				if(entities[offset0 + REVERSED] > 0.0f) {
+					vx0 = -vx0;
+					vy0 = -vy0;
+				}
+				
 				float vx1 = entities[offset1 + VELOCITY_X];
 				float vy1 = entities[offset1 + VELOCITY_Y];
+				if(entities[offset1 + REVERSED] > 0.0f) {
+					vx1 = -vx1;
+					vy1 = -vy1;
+				}
 				
 				float dot = vx0 * normalX + vy0 * normalY;
 				vx0 = vx0 - 2.0f * dot * normalX;
