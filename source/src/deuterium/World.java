@@ -554,7 +554,7 @@ public class World {
 				// bullet to bullet colission, delete both
 				entities[offset0 + IN_USE] = 0.0f;
 				entities[offset1 + IN_USE] = 0.0f;
-			} else if(kind1 == KIND_VAL_PLAYER || kind1 == KIND_VAL_TRAP) {
+			} else if(kind1 == KIND_VAL_PLAYER /* || kind1 == KIND_VAL_TRAP */) {
 				// bullet to player colission, reverse the players time arrow for 2 seconds and also
 				// remove the bullet
 				entities[offset0 + IN_USE] = 0.0f;
@@ -643,15 +643,19 @@ public class World {
 				vx1 = vx1 - 2.0f * dot * normalX;
 				vy1 = vy1 - 2.0f * dot * normalY;
 				
-				entities[offset0 + POSITION_X] = previousPosX0;
-				entities[offset0 + POSITION_Y] = previousPosY0;
-				entities[offset0 + VELOCITY_X] = vx0;
-				entities[offset0 + VELOCITY_Y] = vy0;
+				if(entities[offset0 + REVERSED] <= 0.0f) {
+					entities[offset0 + POSITION_X] = previousPosX0;
+					entities[offset0 + POSITION_Y] = previousPosY0;
+					entities[offset0 + VELOCITY_X] = vx0;
+					entities[offset0 + VELOCITY_Y] = vy0;
+				}
 				
-				entities[offset1 + POSITION_X] = previousPosX1;
-				entities[offset1 + POSITION_Y] = previousPosY1;
-				entities[offset1 + VELOCITY_X] = vx1;
-				entities[offset1 + VELOCITY_Y] = vy1;
+				if(entities[offset1 + REVERSED] <= 0.0f) {
+					entities[offset1 + POSITION_X] = previousPosX1;
+					entities[offset1 + POSITION_Y] = previousPosY1;
+					entities[offset1 + VELOCITY_X] = vx1;
+					entities[offset1 + VELOCITY_Y] = vy1;
+				}
 			}
 			
 	//		// respond by inverting velocity vector
