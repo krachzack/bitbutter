@@ -14,7 +14,7 @@ import java.util.Arrays;
 import javax.imageio.ImageIO;
 
 public class World {
-	public static final float GAME_DURATION = 10;//3 * 60.0f;
+	public static final float GAME_DURATION = 20;//3 * 60.0f;
 	
 	private static final int DRAINED_STAR_SPEED = 110;
 	public static final int POSITION_X = 0;
@@ -515,12 +515,57 @@ public class World {
 		}
 		
 		if(kind1 == KIND_VAL_TRAP) {
-			entities[offset0 + VELOCITY_X] = -entities[offset0 + VELOCITY_X];
-			entities[offset0 + VELOCITY_Y] = -entities[offset0 + VELOCITY_Y];
+			float previousPosX0 = entities[1*ENTITY_COUNT_MAX*ENTITY_SIZE + offset0 + POSITION_X];
+			float previousPosY0 = entities[1*ENTITY_COUNT_MAX*ENTITY_SIZE + offset0 + POSITION_Y];
+			float previousPosX1 = entities[1*ENTITY_COUNT_MAX*ENTITY_SIZE + offset1 + POSITION_X];
+			float previousPosY1 = entities[1*ENTITY_COUNT_MAX*ENTITY_SIZE + offset1 + POSITION_Y];
 			
-			entities[offset1 + VELOCITY_X] = -entities[offset1 + VELOCITY_X];
-			entities[offset1 + VELOCITY_Y] = -entities[offset1 + VELOCITY_Y];
+			// Reflect velocity on the vector connecting the centers
+			float connectX = previousPosX1 - previousPosX0;
+			float connectY = previousPosY1 - previousPosY0;
+			float connectMag = (float) Math.sqrt(connectX*connectX + connectY*connectY);
+			connectX /= connectMag;
+			connectY /= connectMag;
+			
+//			float normalX = connectY;
+//			float normalY = -connectX;
+			float normalX = connectX;
+			float normalY = connectY;
+			
+			float vx0 = entities[offset0 + VELOCITY_X];
+			float vy0 = entities[offset0 + VELOCITY_Y];
+			float vx1 = entities[offset1 + VELOCITY_X];
+			float vy1 = entities[offset1 + VELOCITY_Y];
+			
+			float dot = vx0 * normalX + vy0 * normalY;
+			vx0 = vx0 - 2.0f * dot * normalX;
+			vy0 = vy0 - 2.0f * dot * normalY;
+			
+			normalX = -normalX;
+			normalY = -normalY;
+			dot = vx1 * normalX + vy1 * normalY;
+			vx1 = vx1 - 2.0f * dot * normalX;
+			vy1 = vy1 - 2.0f * dot * normalY;
+			
+			entities[offset0 + POSITION_X] = previousPosX0;
+			entities[offset0 + POSITION_Y] = previousPosY0;
+			entities[offset0 + VELOCITY_X] = vx0;
+			entities[offset0 + VELOCITY_Y] = vy0;
+			
+			entities[offset1 + POSITION_X] = previousPosX1;
+			entities[offset1 + POSITION_Y] = previousPosY1;
+			entities[offset1 + VELOCITY_X] = vx1;
+			entities[offset1 + VELOCITY_Y] = vy1;
 		}
+		
+//		// respond by inverting velocity vector
+//		if(kind1 == KIND_VAL_TRAP) {
+//			entities[offset0 + VELOCITY_X] = -entities[offset0 + VELOCITY_X];
+//			entities[offset0 + VELOCITY_Y] = -entities[offset0 + VELOCITY_Y];
+//			
+//			entities[offset1 + VELOCITY_X] = -entities[offset1 + VELOCITY_X];
+//			entities[offset1 + VELOCITY_Y] = -entities[offset1 + VELOCITY_Y];
+//		}
 	}
 
 	private void respondToBulletColission(int offset0, int offset1) {
