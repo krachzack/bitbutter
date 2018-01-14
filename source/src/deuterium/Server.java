@@ -26,7 +26,8 @@ import java.util.WeakHashMap;
 public class Server implements Runnable {
 	
 	public static final int PLAYER_VELOCITY_MAGNITUDE = 100;
-	private static final int PLAYER_PARTICLE_COUNT = 100;
+//	Not deleting clientParticle stuff for now to see if we run into any problems like this.
+//	private static final int PLAYER_PARTICLE_COUNT = 100;
 
 	private static final int BULLET_VELOCITY_MAGNITUDE = 3 * PLAYER_VELOCITY_MAGNITUDE;
 
@@ -37,21 +38,16 @@ public class Server implements Runnable {
 	 */
 	public static final float SERVER_UPDATE_INTERVAL = 0.03f;
 
-	private static final float PARTICLE_SPAWN_INTERVAL = 0.03f;
-
-	private static final float PARTICLE_SPREAD = 7.0f;
-
 	private volatile boolean run = true;
 
 	private Selector selector;
 	private Set<SocketChannel> clientChannels = new HashSet<>();
 	private Map<SocketChannel, Integer> clientIdentities = new WeakHashMap<>();
-	private Map<SocketChannel, int[]> clientParticles = new WeakHashMap<>();
+//	private Map<SocketChannel, int[]> clientParticles = new WeakHashMap<>();
 	private Map<SocketChannel, ByteBuffer> fromClientUpdateBufs = new WeakHashMap<>();
 	private Map<SocketChannel, ByteBuffer> fromClientUpdateBufLens = new WeakHashMap<>();
 	private Map<SocketChannel, ByteBuffer> toClientUpdateBufs = new WeakHashMap<>();
 	private World world;
-	private float nextParticleSpawnWaitTime;
 	private int nextPlayerTexId = 0;
 
 	public void terminate() {
@@ -104,8 +100,8 @@ public class Server implements Runnable {
 		System.out.println(clientChannels.size());
 		channel.register(selector, SelectionKey.OP_READ | SelectionKey.OP_WRITE);
 
-		int[] playerParticles = createPlayerParticles();
-		clientParticles.put(channel, playerParticles);
+//		int[] playerParticles = createPlayerParticles();
+//		clientParticles.put(channel, playerParticles);
 
 		int playerID = createPlayer();
 		clientIdentities.put(channel, playerID);
@@ -372,57 +368,28 @@ public class Server implements Runnable {
 		int id = clientIdentities.get(channel);
 		world.removePlayer(id);
 
-		for(int particleId: clientParticles.get(channel)) {
-			world.removeEntity(particleId);
-		}
+//		for(int particleId: clientParticles.get(channel)) {
+//			world.removeEntity(particleId);
+//		}
 	}
 
-	private int[] createPlayerParticles() {
-		int[] playerParticles = new int[PLAYER_PARTICLE_COUNT];
-
-		for(int i = 0; i < playerParticles.length; ++i) {
-			playerParticles[i] = world.addEntity();
-			world.set(playerParticles[i], World.DIMENSION_X, 2.0f);
-			world.set(playerParticles[i], World.DIMENSION_Y, 2.0f);
-			world.set(playerParticles[i], World.COLOR_R, 1.0f);
-			world.set(playerParticles[i], World.COLOR_G, 1.0f);
-			world.set(playerParticles[i], World.COLOR_B, 1.0f);
-		}
-
-		return playerParticles;
-	}
+//	private int[] createPlayerParticles() {
+//		int[] playerParticles = new int[PLAYER_PARTICLE_COUNT];
+//
+//		for(int i = 0; i < playerParticles.length; ++i) {
+//			playerParticles[i] = world.addEntity();
+//			world.set(playerParticles[i], World.DIMENSION_X, 2.0f);
+//			world.set(playerParticles[i], World.DIMENSION_Y, 2.0f);
+//			world.set(playerParticles[i], World.COLOR_R, 1.0f);
+//			world.set(playerParticles[i], World.COLOR_G, 1.0f);
+//			world.set(playerParticles[i], World.COLOR_B, 1.0f);
+//		}
+//
+//		return playerParticles;
+//	}
 
 	private void executeMechanics(float dt) {
-		updateParticles(dt);
-
 		world.update(dt);
-	}
-
-	private void updateParticles(float dt) {
-		if(nextParticleSpawnWaitTime <= 0) {
-			nextParticleSpawnWaitTime += PARTICLE_SPAWN_INTERVAL;
-
-			for(SocketChannel clientChannel: clientChannels) {
-				int clientID = clientIdentities.get(clientChannel);
-				int[] particleIDs = clientParticles.get(clientChannel);
-
-				float clientPosX = world.get(clientID, World.POSITION_X);
-				float clientPosY = world.get(clientID, World.POSITION_Y);
-
-				for (int i = 0; i < 5; i++) {
-					float yMod = (i - 2) * PARTICLE_SPREAD;
-					int iterations = 5 - 2 * Math.abs(i - 3);
-					for (int j = 0; j < iterations; j++) {
-						float xMod = (j - (iterations - 1) / 2) * PARTICLE_SPREAD;
-						int anyParticleID = particleIDs[(int) (Math.random() * particleIDs.length)];
-						world.set(anyParticleID, World.POSITION_X, clientPosX + xMod);
-						world.set(anyParticleID, World.POSITION_Y, clientPosY + yMod);
-					}
-				}
-			}
-		} else {
-			nextParticleSpawnWaitTime -= dt;
-		}
 	}
 	
 	/**

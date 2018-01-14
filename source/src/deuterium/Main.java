@@ -111,8 +111,9 @@ public class Main {
 
 	private static void makeLocalServerDiscoverable() {
 		new Thread(() -> {
+			MulticastSocket publishSock = null;
 			try {
-				MulticastSocket publishSock = new MulticastSocket(DISCOVERY_MULTICAST_GROUP.getPort());
+				publishSock = new MulticastSocket(DISCOVERY_MULTICAST_GROUP.getPort());
 				
 				while(true) {
 					publishSock.send(new DatagramPacket(new byte[] { 42, 24 }, 2, DISCOVERY_MULTICAST_GROUP));
@@ -123,6 +124,8 @@ public class Main {
 				e.printStackTrace();
 			} catch (InterruptedException e) {
 				e.printStackTrace();
+			} finally {
+				if (publishSock != null) publishSock.close();
 			}
 		}).start();
 	}
