@@ -20,8 +20,9 @@ public class Client implements Runnable {
 
 	@Override
 	public void run() {
+		Socket sock = null;
 		try {
-			Socket sock = new Socket(serverAddr, Server.SERVER_ADDR.getPort());
+			sock = new Socket(serverAddr, Server.SERVER_ADDR.getPort());
 			
 			while(true) {
 				ObjectInputStream inStream = new ObjectInputStream(sock.getInputStream());
@@ -47,6 +48,12 @@ public class Client implements Runnable {
 			System.exit(1);
 		} catch (InterruptedException e) {
 			e.printStackTrace();
+		} finally {
+			try {
+				sock.close();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
 		}
 	}
 

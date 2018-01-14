@@ -4,7 +4,6 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.net.InetSocketAddress;
-import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.nio.channels.CancelledKeyException;
 import java.nio.channels.SelectableChannel;
@@ -12,14 +11,11 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
-import java.util.Arrays;
-import java.util.Date;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 import java.util.WeakHashMap;
-import java.util.concurrent.CancellationException;
 
 /**
  * 
@@ -29,7 +25,8 @@ import java.util.concurrent.CancellationException;
 public class Server implements Runnable {
 
 	public static final int PLAYER_VELOCITY_MAGNITUDE = 100;
-	private static final int PLAYER_PARTICLE_COUNT = 260;
+//	Not deleting clientParticle stuff for now to see if we run into any problems like this.
+//	private static final int PLAYER_PARTICLE_COUNT = 260;
 
 	private static final int BULLET_VELOCITY_MAGNITUDE = 3 * PLAYER_VELOCITY_MAGNITUDE;
 
@@ -40,21 +37,16 @@ public class Server implements Runnable {
 	 */
 	public static final float SERVER_UPDATE_INTERVAL = 0.03f;
 
-	private static final float PARTICLE_SPAWN_INTERVAL = 0.03f;
-
-	private static final float PARTICLE_SPREAD = 7.0f;
-
 	private volatile boolean run = true;
 
 	private Selector selector;
 	private Set<SocketChannel> clientChannels = new HashSet<>();
 	private Map<SocketChannel, Integer> clientIdentities = new WeakHashMap<>();
-	private Map<SocketChannel, int[]> clientParticles = new WeakHashMap<>();
+//	private Map<SocketChannel, int[]> clientParticles = new WeakHashMap<>();
 	private Map<SocketChannel, ByteBuffer> fromClientUpdateBufs = new WeakHashMap<>();
 	private Map<SocketChannel, ByteBuffer> fromClientUpdateBufLens = new WeakHashMap<>();
 	private Map<SocketChannel, ByteBuffer> toClientUpdateBufs = new WeakHashMap<>();
 	private World world;
-	private float nextParticleSpawnWaitTime;
 	private int nextPlayerTexId = 0;
 
 	public void terminate() {
@@ -107,8 +99,8 @@ public class Server implements Runnable {
 		System.out.println(clientChannels.size());
 		channel.register(selector, SelectionKey.OP_READ | SelectionKey.OP_WRITE);
 
-		int[] playerParticles = createPlayerParticles();
-		clientParticles.put(channel, playerParticles);
+//		int[] playerParticles = createPlayerParticles();
+//		clientParticles.put(channel, playerParticles);
 
 		int playerID = createPlayer();
 		clientIdentities.put(channel, playerID);
@@ -246,9 +238,6 @@ public class Server implements Runnable {
 			float playerPosY = world.get(clientID, World.POSITION_Y);
 			float playerDimX = world.get(clientID, World.DIMENSION_X);
 			float playerDimY = world.get(clientID, World.DIMENSION_Y);
-			float playerRed = world.get(clientID, World.COLOR_R);
-			float playerGreen = world.get(clientID, World.COLOR_G);
-			float playerBlue = world.get(clientID, World.COLOR_B);
 
 			float bulletDirX = dto.getData()[0];
 			float bulletDirY = dto.getData()[1];
@@ -299,7 +288,7 @@ public class Server implements Runnable {
 		for(int i = 0; i < 5; ++i) {
 			int trap = world.addEntity();
 
-			float radius = (float) (20.0 * Math.min(Math.random() + 0.2, 1.0));
+			//float radius = (float) (20.0 * Math.min(Math.random() + 0.2, 1.0));
 			float x = (float) ((Math.random() - 0.5) * Shell.WIDTH);
 			float y = (float) ((Math.random() - 0.5) * Shell.HEIGHT);
 			float vx = (float) ((2.0 * Math.random() - 1.0) * 30);
@@ -347,56 +336,27 @@ public class Server implements Runnable {
 		int id = clientIdentities.get(channel);
 		world.removePlayer(id);
 
-		for(int particleId: clientParticles.get(channel)) {
-			world.removeEntity(particleId);
-		}
+//		for(int particleId: clientParticles.get(channel)) {
+//			world.removeEntity(particleId);
+//		}
 	}
 
-	private int[] createPlayerParticles() {
-		int[] playerParticles = new int[PLAYER_PARTICLE_COUNT];
-
-		for(int i = 0; i < playerParticles.length; ++i) {
-			playerParticles[i] = world.addEntity();
-			world.set(playerParticles[i], World.DIMENSION_X, 2.0f);
-			world.set(playerParticles[i], World.DIMENSION_Y, 2.0f);
-			world.set(playerParticles[i], World.COLOR_R, 1.0f);
-			world.set(playerParticles[i], World.COLOR_G, 1.0f);
-			world.set(playerParticles[i], World.COLOR_B, 1.0f);
-		}
-
-		return playerParticles;
-	}
+//	private int[] createPlayerParticles() {
+//		int[] playerParticles = new int[PLAYER_PARTICLE_COUNT];
+//
+//		for(int i = 0; i < playerParticles.length; ++i) {
+//			playerParticles[i] = world.addEntity();
+//			world.set(playerParticles[i], World.DIMENSION_X, 2.0f);
+//			world.set(playerParticles[i], World.DIMENSION_Y, 2.0f);
+//			world.set(playerParticles[i], World.COLOR_R, 1.0f);
+//			world.set(playerParticles[i], World.COLOR_G, 1.0f);
+//			world.set(playerParticles[i], World.COLOR_B, 1.0f);
+//		}
+//
+//		return playerParticles;
+//	}
 
 	private void executeMechanics(float dt) {
-		updateParticles(dt);
-
 		world.update(dt);
-	}
-
-	private void updateParticles(float dt) {
-		if(nextParticleSpawnWaitTime <= 0) {
-			nextParticleSpawnWaitTime += PARTICLE_SPAWN_INTERVAL;
-
-			for(SocketChannel clientChannel: clientChannels) {
-				int clientID = clientIdentities.get(clientChannel);
-				int[] particleIDs = clientParticles.get(clientChannel);
-
-				float clientPosX = world.get(clientID, World.POSITION_X);
-				float clientPosY = world.get(clientID, World.POSITION_Y);
-
-				for (int i = 0; i < 5; i++) {
-					float yMod = (i - 2) * PARTICLE_SPREAD;
-					int iterations = 5 - 2 * Math.abs(i - 3);
-					for (int j = 0; j < iterations; j++) {
-						float xMod = (j - (iterations - 1) / 2) * PARTICLE_SPREAD;
-						int anyParticleID = particleIDs[(int) (Math.random() * particleIDs.length)];
-						world.set(anyParticleID, World.POSITION_X, clientPosX + xMod);
-						world.set(anyParticleID, World.POSITION_Y, clientPosY + yMod);
-					}
-				}
-			}
-		} else {
-			nextParticleSpawnWaitTime -= dt;
-		}
 	}
 }

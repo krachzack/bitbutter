@@ -6,10 +6,8 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.MulticastSocket;
 import java.net.NetworkInterface;
-import java.net.SocketAddress;
 import java.net.SocketException;
 import java.net.SocketTimeoutException;
-import java.net.UnknownHostException;
 import java.util.Arrays;
 import java.util.Enumeration;
 
@@ -113,8 +111,9 @@ public class Main {
 
 	private static void makeLocalServerDiscoverable() {
 		new Thread(() -> {
+			MulticastSocket publishSock = null;
 			try {
-				MulticastSocket publishSock = new MulticastSocket(DISCOVERY_MULTICAST_GROUP.getPort());
+				publishSock = new MulticastSocket(DISCOVERY_MULTICAST_GROUP.getPort());
 				
 				while(true) {
 					publishSock.send(new DatagramPacket(new byte[] { 42, 24 }, 2, DISCOVERY_MULTICAST_GROUP));
@@ -125,6 +124,8 @@ public class Main {
 				e.printStackTrace();
 			} catch (InterruptedException e) {
 				e.printStackTrace();
+			} finally {
+				if (publishSock != null) publishSock.close();
 			}
 		}).start();
 	}

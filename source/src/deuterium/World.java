@@ -7,8 +7,6 @@ import java.awt.geom.AffineTransform;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.FloatBuffer;
 import java.util.Arrays;
 
 import javax.imageio.ImageIO;
@@ -53,9 +51,12 @@ public class World {
 	private static final int KIND_SIZE = 1;
 	private static final int TEX_INDEX_SIZE = 1;
 	private static final int ENTITY_SIZE = POSITION_SIZE + VELOCITY_SIZE + COLOR_SIZE + DIMENSION_SIZE + IN_USE_SIZE + REVERSED_SIZE + COLLISION_ENABLED_SIZE + KIND_SIZE + TEX_INDEX_SIZE;
-	
-	private static final int ENTITY_COUNT_MAX = 256 + 240; // Because Paul wanted MORE particles
+
+	private static final int ENTITY_COUNT_MAX = 256 + 500;
 	private static final int PAST_FRAMES_MAX = 500;
+	private static final int PARTICLE_COUNT_MAX = 1024;
+	private static final float PARTICLE_SPAWN_INTERVAL = 0.03f;
+	private static final float PARTICLE_SPREAD = 10.0f;
 	
 	/** Amount of stars at least in the game world, if drops below that, will spawn */
 	private static final int MINIMUM_STAR_COUNT = 60;
@@ -98,6 +99,7 @@ public class World {
 	}
 	
 	public float[] entities = new float[ENTITY_SIZE * ENTITY_COUNT_MAX * PAST_FRAMES_MAX];
+	public float[] particles = new float[ENTITY_SIZE * PARTICLE_COUNT_MAX];
 	public int localPlayerID = -1;
 	
 	/** Names of all logged in users, sorted by score descending */
@@ -112,6 +114,7 @@ public class World {
 	
 	private int pastFrameCount = 0;
 	private boolean timeReverse;
+	private float nextParticleSpawnWaitTime;
 	
 	/**
 	 * Called from the server to serialize everything that a client could possible draw
@@ -300,6 +303,35 @@ public class World {
 			// Archive the old frame
 			System.arraycopy(entities, 0, entities, ENTITY_COUNT_MAX*ENTITY_SIZE, entities.length - (ENTITY_COUNT_MAX*ENTITY_SIZE));
 			++pastFrameCount;
+		}
+	}
+
+	private void updateParticles(float dt) {
+		if(nextParticleSpawnWaitTime <= 0) {
+			nextParticleSpawnWaitTime += PARTICLE_SPAWN_INTERVAL;
+
+			for(int clientID: userIDs) {
+				float clientPosX = get(clientID, World.POSITION_X);
+				float clientPosY = get(clientID, World.POSITION_Y);
+
+				for (int i = 0; i < 7; i++) {
+					float yMod = (i - 3) * PARTICLE_SPREAD;
+					int iterations = 7 - (2 * Math.abs(i - 3));
+					for (int j = 0; j < iterations; j++) {
+						float xMod = (j - (iterations - 1) / 2) * PARTICLE_SPREAD;
+						int anyParticleID = (int) (Math.random() * PARTICLE_COUNT_MAX);
+						particles[anyParticleID * ENTITY_SIZE + World.POSITION_X] = clientPosX + xMod;
+						particles[anyParticleID * ENTITY_SIZE + World.POSITION_Y] = clientPosY + yMod;
+						particles[anyParticleID * ENTITY_SIZE + World.DIMENSION_X] = 2.0f;
+						particles[anyParticleID * ENTITY_SIZE + World.DIMENSION_Y] = 2.0f;
+						particles[anyParticleID * ENTITY_SIZE + World.COLOR_R] = 1.0f;
+						particles[anyParticleID * ENTITY_SIZE + World.COLOR_G] = 1.0f;
+						particles[anyParticleID * ENTITY_SIZE + World.COLOR_B] = 1.0f;
+					}
+				}
+			}
+		} else {
+			nextParticleSpawnWaitTime -= dt;
 		}
 	}
 
@@ -654,7 +686,18 @@ public class World {
 	public void draw(float dt, Graphics2D g) {
 		AffineTransform oldTrans = g.getTransform();
 		Color oldColor = g.getColor();
+
+		updateParticles(dt); // Have to do this here because different threads have different worlds.
 		
+		// Set transform so that we can draw in y-up normalized device coordinates
+		g.translate(Shell.WIDTH / 2.0, Shell.HEIGHT / 2.0);
+		g.scale(1, -1);
+		
+		
+		// Set up camera transform, is zero if no local player ID defined
+		g.translate(-getCameraPositionX(), -getCameraPositionY());
+		
+		renderParticles(g);
 		renderEntitites(g);
 		
 		g.setColor(oldColor);
@@ -667,15 +710,6 @@ public class World {
 	}
 
 	private void renderEntitites(Graphics2D g) {
-		// Set transform so that we can draw in y-up normalized device coordinates
-		g.translate(Shell.WIDTH / 2.0, Shell.HEIGHT / 2.0);
-		g.scale(1, -1);
-		
-		
-		// Set up camera transform, is zero if no local player ID defined
-		g.translate(-getCameraPositionX(), -getCameraPositionY());
-
-		
 		AffineTransform baseTrans = g.getTransform();
 		
 		angle += 0.001;
@@ -689,7 +723,6 @@ public class World {
 				g.translate(entities[offset + POSITION_X], entities[offset + POSITION_Y]);
 				g.scale(entities[offset + DIMENSION_X] / 2, entities[offset + DIMENSION_Y] / 2);
 				
-				
 				int tex_idx = Math.round(entities[offset + TEX_INDEX]);
 				
 				if(tex_idx == 0) {
@@ -702,6 +735,18 @@ public class World {
 				
 				g.setTransform(baseTrans);
 			}
+		}
+	}
+	
+	private void renderParticles(Graphics2D g) {
+		AffineTransform baseTrans = g.getTransform();
+		
+		for(int offset = 0; offset < (PARTICLE_COUNT_MAX * ENTITY_SIZE); offset += ENTITY_SIZE) {
+			g.translate(particles[offset + POSITION_X], particles[offset + POSITION_Y]);
+			g.scale(particles[offset + DIMENSION_X] / 2, particles[offset + DIMENSION_Y] / 2);
+			g.setColor(new Color(particles[offset + COLOR_R], particles[offset + COLOR_G], particles[offset + COLOR_B]));
+			g.fillOval(-1, -1, 2, 2);
+			g.setTransform(baseTrans);
 		}
 	}
 
