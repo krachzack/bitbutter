@@ -59,9 +59,9 @@ public class World {
 	
 	private static final int ENTITY_COUNT_MAX = 512;
 	private static final int PAST_FRAMES_MAX = 500;
-	private static final int PARTICLE_COUNT_MAX = 1024;
-	private static final float PARTICLE_SPAWN_INTERVAL = 0.03f;
-	private static final float PARTICLE_SPREAD = 10.0f;
+	private static final int PARTICLE_COUNT_MAX = 512;
+	private static final float PARTICLE_SPAWN_INTERVAL = 0.01f;
+	private static final float PARTICLE_SPREAD = 3.5f;
 	
 	/** Amount of stars at least in the game world, if drops below that, will spawn */
 	private static final int MINIMUM_STAR_COUNT = 60;
@@ -73,7 +73,7 @@ public class World {
 	/**
 	 * Drain a star containing 10% of the players points every DRAIN_INTERVAL
 	 */
-	private static final float DRAIN_FACTOR = 0.1f;
+	private static final float DRAIN_FACTOR = 0.2f;
 //	private static final float DRAIN_STAR_LIFETIME = 2.0f;
 	
 	// The world is four times the area of the window, that is a rectangle with double sidelengths
@@ -557,11 +557,14 @@ public class World {
 				// bullet to bullet colission, delete both
 				entities[offset0 + IN_USE] = 0.0f;
 				entities[offset1 + IN_USE] = 0.0f;
-			} else if(kind1 == KIND_VAL_PLAYER /* || kind1 == KIND_VAL_TRAP */) {
+			} else if(kind1 == KIND_VAL_PLAYER) {
 				// bullet to player colission, reverse the players time arrow for 2 seconds and also
 				// remove the bullet
 				entities[offset0 + IN_USE] = 0.0f;
 				entities[offset1 + REVERSED] = 2.0f;
+			} else if(kind1 == KIND_VAL_TRAP) {
+				//entities[offset0 + IN_USE] = 0.0f;
+				//entities[offset1 + REVERSED] = 2.0f;
 			} else {
 				// Ignore colissions with stars
 				// Maybe reverse traps too?
@@ -659,6 +662,8 @@ public class World {
 					entities[offset1 + VELOCITY_X] = vx1;
 					entities[offset1 + VELOCITY_Y] = vy1;
 				}
+			} else if(kind1 == KIND_VAL_STAR) {
+				entities[offset1 + IN_USE] = 0.0f;
 			}
 			
 	//		// respond by inverting velocity vector
@@ -729,7 +734,7 @@ public class World {
 			if(entities[offset + IN_USE] == 1.0f && entities[offset + REVERSED] > 0) {
 				float timeLeftToReverse = entities[offset + REVERSED];
 				
-				if(entities[offset + LAST_FRAME_OFFSET + IN_USE] == 0.0f) {
+				if(entities[offset + 2 * LAST_FRAME_OFFSET + IN_USE] == 0.0f) {
 					// No more frames to reverse, object would not exist anymore, end rewinding early
 					timeLeftToReverse = 0;
 				} else {
@@ -742,6 +747,11 @@ public class World {
 						System.arraycopy(entities, offset + (i+1) * LAST_FRAME_OFFSET, entities, offset + i * LAST_FRAME_OFFSET, ENTITY_SIZE);
 					}
 					timeLeftToReverse -= Server.SERVER_UPDATE_INTERVAL;
+					
+					/*if(timeLeftToReverse <= 0.0f && isOccuppied(entities[offset + POSITION_X], entities[offset + POSITION_Y], 0.5f * entities[offset + DIMENSION_X])) {
+						// Reverse a little longer if would otherwiese re-appear inside something else
+						timeLeftToReverse = 2 * Server.SERVER_UPDATE_INTERVAL;
+					}*/
 				}
 				
 				entities[offset + REVERSED] = Math.max(0.0f, timeLeftToReverse);
@@ -1069,7 +1079,7 @@ public class World {
 	
 	public boolean isOccuppied(float centerX, float centerY, float radius) {
 		for(int offset = 0; offset < (ENTITY_COUNT_MAX*ENTITY_SIZE); offset += ENTITY_SIZE) {
-			if(entities[offset + IN_USE] == 1.0f) {
+			if(entities[offset + IN_USE] == 1.0f && (entities[offset + KIND] == KIND_VAL_PLAYER || entities[offset + KIND] == KIND_VAL_TRAP)) {
 				float distX = entities[offset + POSITION_X] - centerX;
 				float distY = entities[offset + POSITION_Y] - centerY;
 				float distSqr = distX*distX + distY*distY;
