@@ -1066,4 +1066,22 @@ public class World {
 		
 		return -1;
 	}
+	
+	public boolean isOccuppied(float centerX, float centerY, float radius) {
+		for(int offset = 0; offset < (ENTITY_COUNT_MAX*ENTITY_SIZE); offset += ENTITY_SIZE) {
+			if(entities[offset + IN_USE] == 1.0f) {
+				float distX = entities[offset + POSITION_X] - centerX;
+				float distY = entities[offset + POSITION_Y] - centerY;
+				float distSqr = distX*distX + distY*distY;
+				float radiusSum = radius + (0.5f * entities[offset + DIMENSION_X]);
+				float radiusSumSqr = radiusSum * radiusSum;
+				
+				if(distSqr < radiusSumSqr) {
+					return true;
+				}
+			}
+		}
+		
+		return false;
+	}
 }

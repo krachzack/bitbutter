@@ -286,80 +286,57 @@ public class Server implements Runnable {
 		initTraps();
 	}
 
-	private void initTraps() {
-		int[] trapIDs = new int[10];
+	private int spawn(int id, float diameter, float velocityMagnitude, float kind, boolean colissionEnabled, int texIdx) {
+		float vx, vy;
 		
-		for(int i = 0; i < trapIDs.length; ++i) {
-			int trap = world.addEntity();
-			
-			float x, y;
-			final float diameter = 150.0f;
-
-			// Choose non-colliding start position with rejection sampling
-			boolean hasInitialColission;
-			do {
-				hasInitialColission = false;
-				
-				x = (float) ((Math.random() - 0.5) * Shell.WIDTH);
-				y = (float) ((Math.random() - 0.5) * Shell.HEIGHT);
-				
-				for(int trapIDIdx = 0; trapIDIdx < i; ++trapIDIdx) {
-					int other = trapIDs[trapIDIdx];
-					
-					float distX = world.get(other, World.POSITION_X) - x;
-					float distY = world.get(other, World.POSITION_Y) - y;
-					float distSqr = distX*distX + distY*distY;
-					
-					if(distSqr < (diameter*diameter)) {
-						hasInitialColission = true;
-					}
-				}
-			} while(hasInitialColission);
-			
-			float vx = (float) (Math.random() - 0.5);
-			float vy = (float) (Math.random() - 0.5);
+		if(Math.abs(velocityMagnitude) < 0.0000001) {
+			vx = 0.0f;
+			vy = 0.0f;
+		} else {
+			vx = (float) (Math.random() - 0.5);
+			vy = (float) (Math.random() - 0.5);
 			vx /= Math.sqrt(vx*vx + vy*vy);
 			vy /= Math.sqrt(vx*vx + vy*vy);
-			vx *= 200;
-			vy *= 200;
-//			vx = 0;
-//			vy = 0;
-
-			world.set(trap, World.DIMENSION_X, diameter);
-			world.set(trap, World.DIMENSION_Y, diameter);
-			world.set(trap, World.POSITION_X, x);
-			world.set(trap, World.POSITION_Y, y);
-			world.set(trap, World.VELOCITY_X, vx);
-			world.set(trap, World.VELOCITY_Y, vy);
-			world.set(trap, World.TEX_INDEX, 3);
-			//world.set(trap, World.COLOR_R, 77.0f/255.0f);
-			//world.set(trap, World.COLOR_G, 16.0f/255.0f);
-			//world.set(trap, World.COLOR_B, 121.0f/255.0f);
-			world.set(trap, World.KIND, World.KIND_VAL_TRAP);
-			world.set(trap, World.COLLISION_ENABLED, 1.0f);
+			vx *= velocityMagnitude;
+			vy *= velocityMagnitude;
+		}
+		
+		world.set(id, World.DIMENSION_X, diameter);
+		world.set(id, World.DIMENSION_Y, diameter);
+		world.set(id, World.VELOCITY_X, vx);
+		world.set(id, World.VELOCITY_Y, vy);
+		world.set(id, World.TEX_INDEX, texIdx);
+		world.set(id, World.KIND, kind);
+		world.set(id, World.COLLISION_ENABLED, colissionEnabled ? 1.0f : 0.0f);
+		
+		// Choose non-colliding start position with rejection sampling
+		float x, y;
+		boolean hasInitialColission;
+		do {
+			x = (float) ((Math.random() - 0.5) * (Shell.WIDTH - 0.5*diameter));
+			y = (float) ((Math.random() - 0.5) * (Shell.HEIGHT - 0.5*diameter));
 			
-			trapIDs[i] = trap;
+			hasInitialColission = world.isOccuppied(x, y, 0.5f * diameter);
+		} while(hasInitialColission);
+		
+		world.set(id, World.POSITION_X, x);
+		world.set(id, World.POSITION_Y, y);
+		
+		return id;
+	}
+	
+	private void initTraps() {
+		for(int i = 0; i < 10; ++i) {
+			final float diameter = 150.0f;
+			
+			spawn(world.addEntity(), diameter, 150.0f, World.KIND_VAL_TRAP, true, 3);
 		}
 	}
 
 	private int createPlayer() {
 		int playerID = world.addPlayer(generateName());
-
-		// By randomizing spawn position the chance for players spawning on top of each
-		// other are reduced. It can still happen though, and then they are in rewind forever
-		float posX = (float) ((Math.random() - 0.5) * (Shell.WIDTH - 70.0f));
-		float posY = (float) ((Math.random() - 0.5) * (Shell.HEIGHT - 70.0f));
-
-		world.set(playerID, World.POSITION_X, posX);
-		world.set(playerID, World.POSITION_X, posY);
-		world.set(playerID, World.DIMENSION_X, 70.0f);
-		world.set(playerID, World.DIMENSION_Y, 70.0f);
-		world.set(playerID, World.COLOR_R, (float) 1.0f);
-		world.set(playerID, World.COLOR_G, (float) 1.0f);
-		world.set(playerID, World.COLOR_B, (float) 1.0f);
-		world.set(playerID, World.TEX_INDEX, (nextPlayerTexId++ % 2) + 1);
-		world.set(playerID, World.KIND, World.KIND_VAL_PLAYER);
-		world.set(playerID, World.COLLISION_ENABLED, 1.0f);
+		
+		spawn(playerID, 70.0f, 0.0f, World.KIND_VAL_PLAYER, true, (nextPlayerTexId++ % 2) + 1);
 
 		return playerID;
 	}
@@ -367,26 +344,7 @@ public class Server implements Runnable {
 	private void killPlayer(SelectableChannel channel) {
 		int id = clientIdentities.get(channel);
 		world.removePlayer(id);
-
-//		for(int particleId: clientParticles.get(channel)) {
-//			world.removeEntity(particleId);
-//		}
 	}
-
-//	private int[] createPlayerParticles() {
-//		int[] playerParticles = new int[PLAYER_PARTICLE_COUNT];
-//
-//		for(int i = 0; i < playerParticles.length; ++i) {
-//			playerParticles[i] = world.addEntity();
-//			world.set(playerParticles[i], World.DIMENSION_X, 2.0f);
-//			world.set(playerParticles[i], World.DIMENSION_Y, 2.0f);
-//			world.set(playerParticles[i], World.COLOR_R, 1.0f);
-//			world.set(playerParticles[i], World.COLOR_G, 1.0f);
-//			world.set(playerParticles[i], World.COLOR_B, 1.0f);
-//		}
-//
-//		return playerParticles;
-//	}
 
 	private void executeMechanics(float dt) {
 		world.update(dt);
