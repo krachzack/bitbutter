@@ -23,10 +23,6 @@ public class UniversalDTO implements Serializable {
 		this.data = data;
 	}
 	
-	public int getGameId() {
-		return gameId;
-	}
-
 	public String getUsername() {
 		return username;
 	}
@@ -48,10 +44,5 @@ public class UniversalDTO implements Serializable {
 		}
 		ByteBuffer buf = ByteBuffer.wrap(byteOut.toByteArray());
 		return buf;
-	}
-
-	@Override
-	public String toString() {
-		return "UniversalDTO [gameId=" + gameId + ", username=" + username + ", event=" + event + "]";
 	}
 }

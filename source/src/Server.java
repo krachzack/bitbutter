@@ -66,8 +66,6 @@ public class Server implements Runnable {
 			acceptChannel.socket().bind(SERVER_ADDR);
 			acceptChannel.register(selector, SelectionKey.OP_ACCEPT);
 
-			System.out.println("Server up and running...");
-
 			long lastFrameTime = System.nanoTime();
 			while(run) {
 				// TODO set timeout and do this to sync game loop
@@ -88,8 +86,6 @@ public class Server implements Runnable {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-
-		System.out.println("Server terminating...");
 	}
 
 	private void accept(SelectionKey key) throws IOException {
@@ -97,7 +93,6 @@ public class Server implements Runnable {
 		SocketChannel channel = acceptChannel.accept();
 		channel.configureBlocking(false);
 		clientChannels.add(channel);
-		System.out.println(clientChannels.size());
 		channel.register(selector, SelectionKey.OP_READ | SelectionKey.OP_WRITE);
 
 //		int[] playerParticles = createPlayerParticles();

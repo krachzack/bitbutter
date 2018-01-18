@@ -49,8 +49,6 @@ public class Shell {
 		initKeyboard();
 		initMouseClicks();
 		
-		System.out.println("running client shell");
-		
 		long lastFrameTime = System.nanoTime();
 		while(true) {
 			long thisFrameTime = System.nanoTime();

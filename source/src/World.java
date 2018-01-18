@@ -120,8 +120,6 @@ public class World {
 	 */
 	private float[] drainTimeouts = new float[0];
 	
-	private int pastFrameCount = 0;
-	private boolean timeReverse;
 	private float nextParticleSpawnWaitTime;
 	
 	/**
@@ -259,10 +257,6 @@ public class World {
 		}
 	}
 	
-	public void setTimeReverse(boolean timeReverse) {
-		this.timeReverse = timeReverse && pastFrameCount > 0;
-	}
-	
 	public int addEntity() {
 		int id = -1;
 		
@@ -303,26 +297,15 @@ public class World {
 			// Still preparing, only update after preparation time
 			addStarsIfMissing();
 		} else if(remainingGameDuration > 0) {
-			if(timeReverse) {
-				// Restore the old frame
-				System.arraycopy(entities, ENTITY_COUNT_MAX*ENTITY_SIZE, entities, 0, entities.length - (ENTITY_COUNT_MAX*ENTITY_SIZE));
-				--pastFrameCount;
-				
-				if(pastFrameCount == 0) {
-					timeReverse = false;
-				}
-			} else {
-				integratePosition(dt);
-				timeReverse(dt);
-				detectAndRespondToCollisions(dt);
-				addStarsIfMissing();
-				sortScores();
-				handleLifetimes(dt);
-				
-				// Archive the old frame
-				System.arraycopy(entities, 0, entities, ENTITY_COUNT_MAX*ENTITY_SIZE, entities.length - (ENTITY_COUNT_MAX*ENTITY_SIZE));
-				++pastFrameCount;
-			}
+			integratePosition(dt);
+			timeReverse(dt);
+			detectAndRespondToCollisions(dt);
+			addStarsIfMissing();
+			sortScores();
+			handleLifetimes(dt);
+			
+			// Archive the old frame
+			System.arraycopy(entities, 0, entities, ENTITY_COUNT_MAX*ENTITY_SIZE, entities.length - (ENTITY_COUNT_MAX*ENTITY_SIZE));
 		}
 	}
 
@@ -1000,11 +983,6 @@ public class World {
 	}
 
 	private void renderWinner(Graphics2D g, Font baseFont) {
-		final int WINNER_PADDING_TOP = (int) (Shell.HEIGHT * 0.4f);
-		final int WINNER_FONT_HEIGHT = 22;
-		Font winnerMsgFont = new Font(baseFont.getFontName(), Font.BOLD, WINNER_FONT_HEIGHT);
-		Font localMsgFont = new Font(baseFont.getFontName(), Font.PLAIN, WINNER_FONT_HEIGHT / 2);
-		
 		int winnerIdx = findWinnerIdx();
 		boolean localWin = winnerIdx == findLocalPlayerScoreIdx();
 		String winnerUsername = usernames[winnerIdx];

@@ -42,12 +42,9 @@ public class Client implements Runnable {
 				}
 			}
 			
-		} catch (IOException | ClassNotFoundException e) {
+		} catch (Exception e) {
 			e.printStackTrace();
-			System.err.println("Could not connect to server, exiting...");
 			System.exit(1);
-		} catch (InterruptedException e) {
-			e.printStackTrace();
 		} finally {
 			try {
 				sock.close();
