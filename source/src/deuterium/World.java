@@ -663,7 +663,7 @@ public class World {
 					entities[offset1 + VELOCITY_Y] = vy1;
 				}
 			} else if(kind1 == KIND_VAL_STAR) {
-				entities[offset1 + IN_USE] = 0.0f;
+				//entities[offset1 + IN_USE] = 0.0f;
 			}
 			
 	//		// respond by inverting velocity vector
@@ -807,6 +807,8 @@ public class World {
 		AffineTransform oldTrans = g.getTransform();
 		Color oldColor = g.getColor();
 
+		angle += dt * 1.7;
+		
 		updateParticles(dt); // Have to do this here because different threads have different worlds.
 		
 		// Set transform so that we can draw in y-up normalized device coordinates
@@ -832,9 +834,7 @@ public class World {
 	private void renderEntitites(Graphics2D g) {
 		AffineTransform baseTrans = g.getTransform();
 		
-		angle += 0.005;
-		
-		for(int offset = 0; offset < (ENTITY_COUNT_MAX*ENTITY_SIZE); offset += ENTITY_SIZE) {
+		for(int offset = (ENTITY_COUNT_MAX-1)*ENTITY_SIZE; offset >= 0; offset -= ENTITY_SIZE) {
 			
 			if(entities[offset + IN_USE] == 1.0) {
 				if(entities[offset + KIND] == KIND_VAL_TRAP){
