@@ -1,4 +1,4 @@
-package deuterium;
+
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -289,7 +289,7 @@ public class Server implements Runnable {
 	private int spawn(int id, float diameter, float velocityMagnitude, float kind, boolean colissionEnabled, int texIdx) {
 		float vx, vy;
 		
-		if(Math.abs(velocityMagnitude) < 0.0000001) {
+		if(velocityMagnitude == 0.0f) {
 			vx = 0.0f;
 			vy = 0.0f;
 		} else {

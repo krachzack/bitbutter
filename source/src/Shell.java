@@ -1,4 +1,4 @@
-package deuterium;
+
 import java.awt.AWTEvent;
 import java.awt.Canvas;
 import java.awt.Color;
